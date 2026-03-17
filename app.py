@@ -5,6 +5,11 @@ from utils.load_data import (
     cargar_comparativa_internacional,
     cargar_diccionario,
 )
+from utils.charts import (
+    grafico_distribucion_tasas,
+    grafico_score_por_tipo,
+)
+from utils.scoring import enriquecer_scoring
 
 st.set_page_config(
     page_title="NOVAresDashboard",
@@ -18,6 +23,9 @@ st.set_page_config(
 df = cargar_datos_cda()
 df_int = cargar_comparativa_internacional()
 df_dict = cargar_diccionario()
+
+if not df.empty:
+    df = enriquecer_scoring(df)
 
 # =========================
 # SIDEBAR
@@ -35,15 +43,13 @@ st.sidebar.info(
 # =========================
 st.title("NOVAresDashboard")
 st.markdown("### Inteligencia de Inversión en CDAs del sistema financiero paraguayo")
-
 st.markdown(
     """
     Este dashboard permite analizar la oferta de CDAs en Paraguay desde una perspectiva de
     **rentabilidad, riesgo, accesibilidad y contexto macrofinanciero**.
 
-    A través de distintas secciones, la plataforma facilita una lectura comparativa del mercado,
-    el posicionamiento de las entidades financieras y la evaluación de oportunidades según
-    distintos perfiles de inversión.
+    La plataforma integra una base local del mercado paraguayo y una capa de
+    comparativa internacional para situar mejor el atractivo relativo de las oportunidades.
     """
 )
 
@@ -55,13 +61,9 @@ st.markdown("---")
 total_entidades = df["entity_name"].nunique() if "entity_name" in df.columns else 0
 tasa_promedio = df["rate_nominal_pct"].mean() if "rate_nominal_pct" in df.columns else 0
 tasa_maxima = df["rate_nominal_pct"].max() if "rate_nominal_pct" in df.columns else 0
-score_promedio = (
-    df["final_score_balanced"].mean()
-    if "final_score_balanced" in df.columns else 0
-)
+score_promedio = df["final_score_balanced"].mean() if "final_score_balanced" in df.columns else 0
 
 col1, col2, col3, col4 = st.columns(4)
-
 col1.metric("Entidades analizadas", f"{total_entidades}")
 col2.metric("Tasa nominal promedio", f"{tasa_promedio:.2f}%")
 col3.metric("Tasa nominal máxima", f"{tasa_maxima:.2f}%")
@@ -105,6 +107,34 @@ if not df.empty:
 st.markdown("---")
 
 # =========================
+# VISUALES RÁPIDOS
+# =========================
+st.subheader("Visualización rápida del mercado")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    fig_tasas = grafico_distribucion_tasas(
+        df,
+        col="rate_nominal_pct",
+        titulo="Distribución de tasas nominales"
+    )
+    if fig_tasas is not None:
+        st.plotly_chart(fig_tasas, use_container_width=True)
+
+with col2:
+    fig_score_tipo = grafico_score_por_tipo(
+        df,
+        tipo_col="entity_type",
+        score_col="final_score_balanced",
+        titulo="Score balanceado promedio por tipo de entidad"
+    )
+    if fig_score_tipo is not None:
+        st.plotly_chart(fig_score_tipo, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
 # COBERTURA DEL DASHBOARD
 # =========================
 st.subheader("Cobertura del dashboard")
@@ -136,7 +166,4 @@ st.subheader("Soporte metodológico")
 with st.expander("Ver diccionario básico de variables"):
     st.dataframe(df_dict, use_container_width=True)
 
-# =========================
-# PIE
-# =========================
 st.caption("Desarrollado por NOVAres · 2026")
