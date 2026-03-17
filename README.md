@@ -60,7 +60,9 @@ cda-paraguay-dashboard/
 ├── .gitignore
 │
 ├── data/
-│   └── cda_master_dashboard.csv
+│   ├── cda_master_dashboard.csv
+│   ├── cda_master_dashboard_dictionary.csv
+│   └── comparativa_cda_internacional_v2.csv
 │
 ├── pages/
 │   ├── 1_Overview.py
