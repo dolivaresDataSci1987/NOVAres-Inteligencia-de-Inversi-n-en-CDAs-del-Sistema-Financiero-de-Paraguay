@@ -14,7 +14,7 @@ DATA_DIR = BASE_DIR / "data"
 # =========================
 def _convertir_columnas_a_numerico(df, columnas):
     """
-    Convierte a numérico las columnas indicadas si existen en el DataFrame.
+    Convierte a numérico las columnas indicadas si existen.
     """
     for col in columnas:
         if col in df.columns:
@@ -34,7 +34,7 @@ def _convertir_columnas_binarias(df, columnas):
 
 def _limpiar_columnas_texto(df, columnas):
     """
-    Limpia espacios en blanco y homogeniza texto en columnas categóricas.
+    Limpia espacios y homogeniza columnas de texto.
     """
     for col in columnas:
         if col in df.columns:
@@ -192,6 +192,5 @@ def filtrar_datos(
 def obtener_columnas(df):
     """
     Devuelve la lista de columnas del DataFrame.
-    Útil para depuración.
     """
     return df.columns.tolist()
