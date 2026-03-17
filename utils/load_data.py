@@ -2,11 +2,50 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-# Ruta base del proyecto
+# =========================
+# RUTAS DEL PROYECTO
+# =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
 
+# =========================
+# FUNCIONES AUXILIARES
+# =========================
+def _convertir_columnas_a_numerico(df, columnas):
+    """
+    Convierte a numérico las columnas indicadas si existen en el DataFrame.
+    """
+    for col in columnas:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
+
+
+def _convertir_columnas_binarias(df, columnas):
+    """
+    Convierte a enteros binarios las columnas indicadas si existen.
+    """
+    for col in columnas:
+        if col in df.columns:
+            df[col] = df[col].fillna(0).astype(int)
+    return df
+
+
+def _limpiar_columnas_texto(df, columnas):
+    """
+    Limpia espacios en blanco y homogeniza texto en columnas categóricas.
+    """
+    for col in columnas:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.strip()
+            df.loc[df[col].isin(["nan", "None", ""]), col] = pd.NA
+    return df
+
+
+# =========================
+# CARGA DE DATOS PRINCIPAL
+# =========================
 @st.cache_data
 def cargar_datos_cda():
     """
@@ -15,7 +54,6 @@ def cargar_datos_cda():
     path = DATA_DIR / "cda_master_dashboard.csv"
     df = pd.read_csv(path)
 
-    # Limpieza ligera
     columnas_numericas = [
         "term_days_floor",
         "rate_nominal_pct",
@@ -48,10 +86,6 @@ def cargar_datos_cda():
         "rank_aggressive",
     ]
 
-    for col in columnas_numericas:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
     columnas_binarias = [
         "withdrawal_allowed",
         "compound_interest",
@@ -59,13 +93,27 @@ def cargar_datos_cda():
         "auto_renewal",
     ]
 
-    for col in columnas_binarias:
-        if col in df.columns:
-            df[col] = df[col].fillna(0).astype(int)
+    columnas_texto = [
+        "entity_name",
+        "entity_type",
+        "instrument_name",
+        "currency_code",
+        "term_profile",
+        "recommendation_tag",
+        "source",
+        "notes",
+    ]
+
+    df = _convertir_columnas_a_numerico(df, columnas_numericas)
+    df = _convertir_columnas_binarias(df, columnas_binarias)
+    df = _limpiar_columnas_texto(df, columnas_texto)
 
     return df
 
 
+# =========================
+# CARGA DE COMPARATIVA INTERNACIONAL
+# =========================
 @st.cache_data
 def cargar_comparativa_internacional():
     """
@@ -84,13 +132,24 @@ def cargar_comparativa_internacional():
         "guarantee_exists",
     ]
 
-    for col in columnas_numericas:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+    columnas_texto = [
+        "country",
+        "region",
+        "market_risk_tier",
+        "deposit_protection_scheme",
+        "deposit_guarantee_limit",
+        "relative_attractiveness_note",
+    ]
+
+    df = _convertir_columnas_a_numerico(df, columnas_numericas)
+    df = _limpiar_columnas_texto(df, columnas_texto)
 
     return df
 
 
+# =========================
+# CARGA DEL DICCIONARIO
+# =========================
 @st.cache_data
 def cargar_diccionario():
     """
@@ -101,6 +160,9 @@ def cargar_diccionario():
     return df
 
 
+# =========================
+# FILTROS
+# =========================
 def filtrar_datos(
     df,
     monedas=None,
@@ -112,13 +174,24 @@ def filtrar_datos(
     """
     df_filtrado = df.copy()
 
-    if monedas:
+    if monedas and "currency_code" in df_filtrado.columns:
         df_filtrado = df_filtrado[df_filtrado["currency_code"].isin(monedas)]
 
-    if tipos_entidad:
+    if tipos_entidad and "entity_type" in df_filtrado.columns:
         df_filtrado = df_filtrado[df_filtrado["entity_type"].isin(tipos_entidad)]
 
-    if perfiles_plazo:
+    if perfiles_plazo and "term_profile" in df_filtrado.columns:
         df_filtrado = df_filtrado[df_filtrado["term_profile"].isin(perfiles_plazo)]
 
     return df_filtrado
+
+
+# =========================
+# UTILIDADES DE APOYO
+# =========================
+def obtener_columnas(df):
+    """
+    Devuelve la lista de columnas del DataFrame.
+    Útil para depuración.
+    """
+    return df.columns.tolist()
