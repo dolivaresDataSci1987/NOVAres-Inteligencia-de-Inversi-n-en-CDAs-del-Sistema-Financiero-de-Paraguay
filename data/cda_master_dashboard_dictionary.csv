@@ -1,0 +1,47 @@
+column_name,description
+date_reference,Reference month of the quote
+entity_name,Entity offering the CDA
+entity_type,bank or financial
+size_bucket,Proxy size bucket
+currency_code,Currency code
+instrument_name,Instrument name / CDA bucket
+term_bucket,Term bucket name
+term_days_floor,Lower bound of term in days
+term_profile,short_term / medium_term / long_term
+rate_nominal_pct,Nominal annual rate (%)
+rate_effective_pct,Effective rate if available (%)
+inflation_yoy_pct,Inflation YoY used for real-rate approximation (%)
+real_rate_pct,Approximate real rate (%)
+policy_rate_pct,Policy rate (%)
+system_passive_rate_pct,System passive average rate (%)
+real_policy_rate,Policy rate minus inflation (%)
+cda_attractiveness_score,Macro attractiveness score for CDs
+risk_score,Original base risk score from source table
+risk_proxy,Proxy risk level of the entity (lower is better)
+liquidity_score,Proxy liquidity score 0-100
+solvency_score,Proxy solvency score 0-100
+npl_score,Proxy asset-quality score 0-100
+profitability_score,Proxy profitability score 0-100
+withdrawal_allowed,1 if early withdrawal is allowed
+early_withdrawal_penalty,Penalty intensity 0-1 (higher = worse)
+interest_payment_frequency,Interest payment timing
+compound_interest,1 if compound interest applies
+min_amount,Minimum amount in PYG
+guarantee,1 if guarantee proxy is assigned
+auto_renewal,1 if auto-renewal proxy is assigned
+nominal_return_score_100,Relative nominal-return score 0-100
+real_return_score_100,Relative real-return score 0-100
+safety_score_100,Safety score 0-100 (higher = safer)
+flexibility_score_100,Flexibility/contract score 0-100
+accessibility_score_100,Accessibility based on minimum amount 0-100
+market_timing_score_100,Macro timing score 0-100
+final_score_conservative,Final score for conservative profile
+final_score_balanced,Final score for balanced profile
+final_score_aggressive,Final score for aggressive profile
+rank_conservative,Ranking by conservative score
+rank_balanced,Ranking by balanced score
+rank_aggressive,Ranking by aggressive score
+recommendation_tag,Quick qualitative tag
+rate_source,Source identifier of the rate
+source_url,URL of source if available
+data_note,Free-text note about source/assumption
