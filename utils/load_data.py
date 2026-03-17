@@ -2,20 +2,11 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-# =========================
-# RUTAS DEL PROYECTO
-# =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
 
-# =========================
-# FUNCIONES AUXILIARES
-# =========================
 def _convertir_columnas_a_numerico(df, columnas):
-    """
-    Convierte a numérico las columnas indicadas si existen.
-    """
     for col in columnas:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -23,9 +14,6 @@ def _convertir_columnas_a_numerico(df, columnas):
 
 
 def _convertir_columnas_binarias(df, columnas):
-    """
-    Convierte a enteros binarios las columnas indicadas si existen.
-    """
     for col in columnas:
         if col in df.columns:
             df[col] = df[col].fillna(0).astype(int)
@@ -33,9 +21,6 @@ def _convertir_columnas_binarias(df, columnas):
 
 
 def _limpiar_columnas_texto(df, columnas):
-    """
-    Limpia espacios y homogeniza columnas de texto.
-    """
     for col in columnas:
         if col in df.columns:
             df[col] = df[col].astype(str).str.strip()
@@ -43,14 +28,8 @@ def _limpiar_columnas_texto(df, columnas):
     return df
 
 
-# =========================
-# CARGA DE DATOS PRINCIPAL
-# =========================
 @st.cache_data
 def cargar_datos_cda():
-    """
-    Carga el dataset maestro del dashboard.
-    """
     path = DATA_DIR / "cda_master_dashboard.csv"
     df = pd.read_csv(path)
 
@@ -111,14 +90,8 @@ def cargar_datos_cda():
     return df
 
 
-# =========================
-# CARGA DE COMPARATIVA INTERNACIONAL
-# =========================
 @st.cache_data
 def cargar_comparativa_internacional():
-    """
-    Carga la base comparativa internacional.
-    """
     path = DATA_DIR / "comparativa_cda_internacional_v2.csv"
     df = pd.read_csv(path)
 
@@ -147,31 +120,13 @@ def cargar_comparativa_internacional():
     return df
 
 
-# =========================
-# CARGA DEL DICCIONARIO
-# =========================
 @st.cache_data
 def cargar_diccionario():
-    """
-    Carga el diccionario de variables del dataset principal.
-    """
     path = DATA_DIR / "cda_master_dashboard_dictionary.csv"
-    df = pd.read_csv(path)
-    return df
+    return pd.read_csv(path)
 
 
-# =========================
-# FILTROS
-# =========================
-def filtrar_datos(
-    df,
-    monedas=None,
-    tipos_entidad=None,
-    perfiles_plazo=None
-):
-    """
-    Aplica filtros simples al dataset principal.
-    """
+def filtrar_datos(df, monedas=None, tipos_entidad=None, perfiles_plazo=None):
     df_filtrado = df.copy()
 
     if monedas and "currency_code" in df_filtrado.columns:
@@ -186,11 +141,5 @@ def filtrar_datos(
     return df_filtrado
 
 
-# =========================
-# UTILIDADES DE APOYO
-# =========================
 def obtener_columnas(df):
-    """
-    Devuelve la lista de columnas del DataFrame.
-    """
     return df.columns.tolist()
