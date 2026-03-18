@@ -1,63 +1,97 @@
 import streamlit as st
 import pandas as pd
 
-from utils.load_data import cargar_datos_cda, filtrar_datos
+from utils.load_data import cargar_datos_cda
+from utils.filters import render_filtros_cda, aplicar_filtros_cda
+from utils.metrics import (
+    calcular_kpis_generales,
+    calcular_resumen_tipo,
+)
+from utils.insights import generar_insight_riesgo
+from utils.charts import (
+    grafico_riesgo_retorno,
+    grafico_boxplot_por_categoria,
+    grafico_barras_por_categoria,
+    grafico_matriz_riesgo_atractivo,
+    grafico_top_ranking,
+)
 
 st.set_page_config(page_title="Análisis de Riesgo", page_icon="🛡️", layout="wide")
 
 st.title("Análisis de riesgo y retorno")
 st.markdown(
     """
-    Evalúa las oportunidades de inversión en CDAs desde una perspectiva de
-    **riesgo, rentabilidad, liquidez, solvencia y perfil de inversión**.
+    Esta página ayuda a interpretar el mercado de CDAs desde una lógica de
+    **riesgo, retorno real, liquidez y equilibrio general**.
+
+    La idea no es mirar solo cuánto paga una opción, sino entender
+    **si ese retorno compensa el riesgo asumido** y qué oportunidades aparecen
+    como más defensivas o más agresivas dentro del universo filtrado.
     """
 )
 
 # =========================
-# CARGA DE DATOS
+# CARGA
 # =========================
 df = cargar_datos_cda()
+
+if df.empty:
+    st.warning("No se pudo cargar la base de CDAs.")
+    st.stop()
 
 # =========================
 # FILTROS
 # =========================
-st.sidebar.header("Filtros")
-
-monedas = st.sidebar.multiselect(
-    "Moneda",
-    options=sorted(df["currency_code"].dropna().unique()),
-    default=sorted(df["currency_code"].dropna().unique())
-)
-
-tipos_entidad = st.sidebar.multiselect(
-    "Tipo de entidad",
-    options=sorted(df["entity_type"].dropna().unique()),
-    default=sorted(df["entity_type"].dropna().unique())
-)
-
-perfiles_plazo = st.sidebar.multiselect(
-    "Perfil de plazo",
-    options=sorted(df["term_profile"].dropna().unique()),
-    default=sorted(df["term_profile"].dropna().unique())
-)
-
-df_f = filtrar_datos(
-    df,
-    monedas=monedas,
-    tipos_entidad=tipos_entidad,
-    perfiles_plazo=perfiles_plazo
-)
+filtros = render_filtros_cda(df, key_prefix="risk")
+df_f = aplicar_filtros_cda(df, filtros)
 
 if df_f.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
     st.stop()
 
 # =========================
+# GUÍA DE LECTURA
+# =========================
+st.subheader("Cómo interpretar esta página")
+
+st.markdown(
+    """
+    Aquí conviene leer cada oportunidad con cuatro preguntas simples:
+
+    - **¿Cuánto paga?** → tasa nominal y tasa real.
+    - **¿Qué tan defensiva parece?** → riesgo y seguridad relativa.
+    - **¿Qué tan flexible es?** → liquidez y condiciones del producto.
+    - **¿Compensa lo que ofrece?** → score balanceado y posicionamiento frente al resto.
+
+    **Lectura práctica:**
+    - una opción atractiva no siempre es la de mayor tasa,
+    - una opción de menor riesgo no siempre es la mejor si el retorno real es muy pobre,
+    - el punto interesante suele estar en el equilibrio entre retorno y protección.
+    """
+)
+
+with st.expander("Qué significa riesgo alto, medio o bajo en esta página"):
+    st.markdown(
+        """
+        La categoría de riesgo es una **clasificación interna del dashboard** para ordenar oportunidades
+        dentro del universo disponible.
+
+        - **Bajo:** opción relativamente más defensiva frente al resto.
+        - **Medio:** zona intermedia, con compensaciones entre protección y retorno.
+        - **Alto:** opción relativamente más exigente en términos de riesgo.
+
+        Esto no equivale a una garantía ni a una calificación oficial externa.
+        Sirve para comparar mejor las alternativas visibles.
+        """
+    )
+
+st.markdown("---")
+
+# =========================
 # CLASIFICACIONES AUXILIARES
 # =========================
 df_f = df_f.copy()
 
-# Clasificación simple de riesgo
 if "risk_score" in df_f.columns:
     df_f["categoria_riesgo"] = pd.cut(
         df_f["risk_score"],
@@ -67,7 +101,6 @@ if "risk_score" in df_f.columns:
 else:
     df_f["categoria_riesgo"] = "No disponible"
 
-# Clasificación simple de atractivo balanceado
 if "final_score_balanced" in df_f.columns:
     df_f["categoria_atractivo"] = pd.cut(
         df_f["final_score_balanced"],
@@ -78,36 +111,63 @@ else:
     df_f["categoria_atractivo"] = "No disponible"
 
 # =========================
-# KPIs PRINCIPALES
+# KPIS
 # =========================
-st.subheader("KPIs principales de riesgo y retorno")
+kpis = calcular_kpis_generales(df_f)
 
-riesgo_promedio = df_f["risk_score"].mean() if "risk_score" in df_f.columns else float("nan")
-tasa_real_promedio = df_f["real_rate_pct"].mean() if "real_rate_pct" in df_f.columns else float("nan")
-liquidez_promedio = df_f["liquidity_score"].mean() if "liquidity_score" in df_f.columns else float("nan")
-solvencia_promedio = df_f["solvency_score"].mean() if "solvency_score" in df_f.columns else float("nan")
-score_balanceado_promedio = (
-    df_f["final_score_balanced"].mean() if "final_score_balanced" in df_f.columns else float("nan")
+st.subheader("KPIs clave de riesgo y retorno")
+
+col1, col2, col3, col4 = st.columns(4)
+col5, col6, col7, col8 = st.columns(4)
+
+col1.metric("Registros", f"{kpis.get('registros', 0)}")
+col2.metric("Entidades", f"{kpis.get('entidades', 0)}")
+col3.metric(
+    "Riesgo promedio",
+    f"{kpis.get('riesgo_promedio', float('nan')):.2f}"
+    if pd.notna(kpis.get("riesgo_promedio")) else "N/D"
 )
-entidades = df_f["entity_name"].nunique() if "entity_name" in df_f.columns else 0
+col4.metric(
+    "Tasa real promedio",
+    f"{kpis.get('tasa_real_promedio', float('nan')):.2f}%"
+    if pd.notna(kpis.get("tasa_real_promedio")) else "N/D"
+)
 
-col1, col2, col3 = st.columns(3)
-col4, col5, col6 = st.columns(3)
-
-col1.metric("Entidades analizadas", f"{entidades}")
-col2.metric("Riesgo promedio", f"{riesgo_promedio:.2f}")
-col3.metric("Tasa real promedio", f"{tasa_real_promedio:.2f}%")
-
-col4.metric("Liquidez promedio", f"{liquidez_promedio:.2f}")
-col5.metric("Solvencia promedio", f"{solvencia_promedio:.2f}")
-col6.metric("Score balanceado promedio", f"{score_balanceado_promedio:.2f}")
+col5.metric(
+    "Liquidez promedio",
+    f"{kpis.get('liquidez_promedio', float('nan')):.2f}"
+    if pd.notna(kpis.get("liquidez_promedio")) else "N/D"
+)
+col6.metric(
+    "Solvencia promedio",
+    f"{kpis.get('solvencia_promedio', float('nan')):.2f}"
+    if pd.notna(kpis.get("solvencia_promedio")) else "N/D"
+)
+col7.metric(
+    "Score balanceado promedio",
+    f"{kpis.get('score_balanceado_promedio', float('nan')):.2f}"
+    if pd.notna(kpis.get("score_balanceado_promedio")) else "N/D"
+)
+col8.metric(
+    "% con tasa real positiva",
+    f"{kpis.get('pct_tasa_real_positiva', float('nan')):.1f}%"
+    if pd.notna(kpis.get("pct_tasa_real_positiva")) else "N/D"
+)
 
 st.markdown("---")
 
 # =========================
-# MEJORES OPORTUNIDADES SEGÚN ENFOQUE
+# INSIGHT
 # =========================
-st.subheader("Mejores oportunidades según enfoque")
+st.subheader("Lectura ejecutiva")
+st.info(generar_insight_riesgo(df_f))
+
+st.markdown("---")
+
+# =========================
+# OPORTUNIDADES DESTACADAS
+# =========================
+st.subheader("Oportunidades destacadas según enfoque")
 
 menor_riesgo = df_f.sort_values("risk_score", ascending=True).iloc[0]
 mayor_tasa_real = df_f.sort_values("real_rate_pct", ascending=False).iloc[0]
@@ -116,75 +176,183 @@ mejor_balanceado = df_f.sort_values("final_score_balanced", ascending=False).ilo
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("### Menor riesgo")
-    st.write(f"**Entidad:** {menor_riesgo['entity_name']}")
-    st.write(f"**Instrumento:** {menor_riesgo.get('instrument_name', 'N/D')}")
-    st.write(f"**Riesgo:** {menor_riesgo['risk_score']:.2f}")
+    st.markdown("### Opción más defensiva")
+    st.write(f"**Entidad:** {menor_riesgo.get('entity_name', 'N/D')}")
+    st.write(f"**Qué es:** CDA de **{int(menor_riesgo.get('term_days_floor', 0)) if pd.notna(menor_riesgo.get('term_days_floor')) else 'N/D'} días**")
+    st.write(f"**Riesgo:** {menor_riesgo.get('risk_score', float('nan')):.2f}")
     st.write(f"**Tasa real:** {menor_riesgo.get('real_rate_pct', float('nan')):.2f}%")
 
 with col2:
-    st.markdown("### Mayor tasa real")
-    st.write(f"**Entidad:** {mayor_tasa_real['entity_name']}")
-    st.write(f"**Instrumento:** {mayor_tasa_real.get('instrument_name', 'N/D')}")
-    st.write(f"**Tasa real:** {mayor_tasa_real['real_rate_pct']:.2f}%")
+    st.markdown("### Mayor retorno real")
+    st.write(f"**Entidad:** {mayor_tasa_real.get('entity_name', 'N/D')}")
+    st.write(f"**Qué es:** CDA de **{int(mayor_tasa_real.get('term_days_floor', 0)) if pd.notna(mayor_tasa_real.get('term_days_floor')) else 'N/D'} días**")
+    st.write(f"**Tasa real:** {mayor_tasa_real.get('real_rate_pct', float('nan')):.2f}%")
     st.write(f"**Riesgo:** {mayor_tasa_real.get('risk_score', float('nan')):.2f}")
 
 with col3:
-    st.markdown("### Mejor equilibrio riesgo-retorno")
-    st.write(f"**Entidad:** {mejor_balanceado['entity_name']}")
-    st.write(f"**Instrumento:** {mejor_balanceado.get('instrument_name', 'N/D')}")
-    st.write(f"**Score balanceado:** {mejor_balanceado['final_score_balanced']:.2f}")
+    st.markdown("### Mejor equilibrio general")
+    st.write(f"**Entidad:** {mejor_balanceado.get('entity_name', 'N/D')}")
+    st.write(f"**Qué es:** CDA de **{int(mejor_balanceado.get('term_days_floor', 0)) if pd.notna(mejor_balanceado.get('term_days_floor')) else 'N/D'} días**")
+    st.write(f"**Score balanceado:** {mejor_balanceado.get('final_score_balanced', float('nan')):.2f}")
     st.write(f"**Tasa real:** {mejor_balanceado.get('real_rate_pct', float('nan')):.2f}%")
 
 st.markdown("---")
 
 # =========================
-# SEGMENTACIÓN DEL MERCADO
+# MAPA RIESGO-RETORNO
 # =========================
-st.subheader("Segmentación básica de oportunidades")
+st.subheader("Mapa principal de riesgo vs retorno real")
+
+fig_rr = grafico_riesgo_retorno(
+    df_f,
+    x_col="risk_score",
+    y_col="real_rate_pct",
+    color_col="entity_type",
+    size_col="final_score_balanced",
+    hover_name="entity_name",
+    titulo="Riesgo vs retorno real"
+)
+if fig_rr is not None:
+    st.plotly_chart(fig_rr, use_container_width=True)
+
+st.markdown(
+    """
+    **Cómo leer este mapa:**  
+    - más a la derecha = mayor riesgo relativo,  
+    - más arriba = mejor retorno real,  
+    - puntos más grandes = mejor score balanceado general.  
+
+    Las oportunidades más interesantes suelen estar en la zona donde el retorno real es alto
+    sin que el riesgo se dispare demasiado.
+    """
+)
+
+st.markdown("---")
+
+# =========================
+# MATRIZ RIESGO / ATRACTIVO
+# =========================
+st.subheader("Matriz de riesgo vs atractivo")
+
+fig_matriz = grafico_matriz_riesgo_atractivo(
+    df_f,
+    risk_col="categoria_riesgo",
+    atr_col="categoria_atractivo",
+    titulo="Cruce entre categoría de riesgo y atractivo balanceado"
+)
+if fig_matriz is not None:
+    st.plotly_chart(fig_matriz, use_container_width=True)
+
+st.markdown(
+    """
+    Esta matriz ayuda a separar rápidamente:
+    - oportunidades con **bajo riesgo y alto atractivo**,
+    - opciones intermedias,
+    - y productos que quedan peor posicionados en el equilibrio general.
+    """
+)
+
+st.markdown("---")
+
+# =========================
+# DISTRIBUCIONES
+# =========================
+st.subheader("Distribuciones y segmentación")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("### Distribución por categoría de riesgo")
-    dist_riesgo = (
-        df_f["categoria_riesgo"]
-        .value_counts(dropna=False)
-        .rename_axis("categoria_riesgo")
-        .reset_index(name="registros")
+    fig = grafico_boxplot_por_categoria(
+        df_f,
+        categoria_col="entity_type",
+        valor_col="risk_score",
+        titulo="Distribución de riesgo por tipo de entidad"
     )
-    st.dataframe(dist_riesgo, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.markdown("### Distribución por atractivo balanceado")
-    dist_atractivo = (
-        df_f["categoria_atractivo"]
-        .value_counts(dropna=False)
-        .rename_axis("categoria_atractivo")
-        .reset_index(name="registros")
+    fig = grafico_boxplot_por_categoria(
+        df_f,
+        categoria_col="term_profile",
+        valor_col="real_rate_pct",
+        titulo="Distribución de tasa real por perfil de plazo"
     )
-    st.dataframe(dist_atractivo, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
+
+col3, col4 = st.columns(2)
+
+with col3:
+    fig = grafico_barras_por_categoria(
+        df_f,
+        categoria_col="entity_type",
+        valor_col="final_score_balanced",
+        titulo="Score balanceado promedio por tipo de entidad"
+    )
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
+
+with col4:
+    fig = grafico_barras_por_categoria(
+        df_f,
+        categoria_col="term_profile",
+        valor_col="risk_score",
+        titulo="Riesgo promedio por perfil de plazo"
+    )
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
 # =========================
-# MATRIZ SIMPLE DE OPORTUNIDADES
+# TOP DEFENSIVO / TOP RETORNO
 # =========================
-st.subheader("Matriz simple de riesgo vs atractivo")
+st.subheader("Rankings específicos")
 
-matriz = (
-    df_f.groupby(["categoria_riesgo", "categoria_atractivo"], dropna=False)
-    .size()
-    .reset_index(name="registros")
-    .sort_values(["categoria_riesgo", "categoria_atractivo"])
-)
+col1, col2 = st.columns(2)
 
-st.dataframe(matriz, use_container_width=True)
+with col1:
+    fig = grafico_top_ranking(
+        df_f.sort_values("final_score_conservative", ascending=False),
+        score_col="final_score_conservative",
+        nombre_col="entity_name",
+        top_n=8,
+        titulo="Top oportunidades defensivas",
+        color_col="entity_type"
+    )
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    fig = grafico_top_ranking(
+        df_f.sort_values("real_rate_pct", ascending=False),
+        score_col="real_rate_pct",
+        nombre_col="entity_name",
+        top_n=8,
+        titulo="Top oportunidades por retorno real",
+        color_col="entity_type"
+    )
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
 # =========================
-# TABLA PRINCIPAL DE RIESGO
+# RESÚMENES TABULARES
+# =========================
+st.subheader("Resúmenes analíticos")
+
+resumen_tipo = calcular_resumen_tipo(df_f)
+
+if not resumen_tipo.empty:
+    st.markdown("### Resumen por tipo de entidad")
+    st.dataframe(resumen_tipo, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
+# TABLA PRINCIPAL
 # =========================
 st.subheader("Tabla de análisis de riesgo")
 
@@ -192,9 +360,10 @@ columnas_riesgo = [
     "entity_name",
     "entity_type",
     "instrument_name",
-    "currency_code",
     "term_profile",
+    "term_bucket",
     "term_days_floor",
+    "min_amount",
     "rate_nominal_pct",
     "real_rate_pct",
     "risk_score",
@@ -219,95 +388,33 @@ columnas_riesgo = [c for c in columnas_riesgo if c in df_f.columns]
 tabla_riesgo = df_f[columnas_riesgo].sort_values(
     ["final_score_balanced", "real_rate_pct"],
     ascending=[False, False]
-)
+).copy()
+
+tabla_riesgo = tabla_riesgo.rename(columns={
+    "entity_name": "Entidad",
+    "entity_type": "Tipo de entidad",
+    "instrument_name": "Instrumento",
+    "term_profile": "Perfil de plazo",
+    "term_bucket": "Bucket plazo",
+    "term_days_floor": "Días",
+    "min_amount": "Monto mínimo",
+    "rate_nominal_pct": "Tasa nominal (%)",
+    "real_rate_pct": "Tasa real (%)",
+    "risk_score": "Riesgo",
+    "risk_proxy": "Proxy de riesgo",
+    "liquidity_score": "Liquidez",
+    "solvency_score": "Solvencia",
+    "npl_score": "NPL",
+    "profitability_score": "Rentabilidad",
+    "safety_score_100": "Seguridad",
+    "flexibility_score_100": "Flexibilidad",
+    "market_timing_score_100": "Timing mercado",
+    "final_score_conservative": "Score conservador",
+    "final_score_balanced": "Score balanceado",
+    "final_score_aggressive": "Score agresivo",
+    "categoria_riesgo": "Categoría riesgo",
+    "categoria_atractivo": "Categoría atractivo",
+    "recommendation_tag": "Etiqueta",
+})
 
 st.dataframe(tabla_riesgo, use_container_width=True)
-
-st.markdown("---")
-
-# =========================
-# RESUMEN POR TIPO DE ENTIDAD
-# =========================
-st.subheader("Resumen por tipo de entidad")
-
-if "entity_type" in df_f.columns:
-    resumen_tipo = (
-        df_f.groupby("entity_type", as_index=False)
-        .agg(
-            registros=("entity_name", "count"),
-            entidades=("entity_name", "nunique"),
-            riesgo_promedio=("risk_score", "mean"),
-            tasa_real_promedio=("real_rate_pct", "mean"),
-            liquidez_promedio=("liquidity_score", "mean"),
-            solvencia_promedio=("solvency_score", "mean"),
-            score_conservador_promedio=("final_score_conservative", "mean"),
-            score_balanceado_promedio=("final_score_balanced", "mean"),
-            score_agresivo_promedio=("final_score_aggressive", "mean"),
-        )
-        .sort_values("score_balanceado_promedio", ascending=False)
-    )
-
-    st.dataframe(resumen_tipo, use_container_width=True)
-
-st.markdown("---")
-
-# =========================
-# MEJORES OPCIONES POR PERFIL
-# =========================
-st.subheader("Mejores opciones por perfil de inversión")
-
-mejor_conservador = df_f.sort_values("final_score_conservative", ascending=False).iloc[0]
-mejor_balanceado = df_f.sort_values("final_score_balanced", ascending=False).iloc[0]
-mejor_agresivo = df_f.sort_values("final_score_aggressive", ascending=False).iloc[0]
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.markdown("### Perfil conservador")
-    st.write(f"**Entidad:** {mejor_conservador['entity_name']}")
-    st.write(f"**Instrumento:** {mejor_conservador.get('instrument_name', 'N/D')}")
-    st.write(f"**Score conservador:** {mejor_conservador['final_score_conservative']:.2f}")
-    st.write(f"**Riesgo:** {mejor_conservador.get('risk_score', float('nan')):.2f}")
-    st.write(f"**Tasa real:** {mejor_conservador.get('real_rate_pct', float('nan')):.2f}%")
-
-with col2:
-    st.markdown("### Perfil balanceado")
-    st.write(f"**Entidad:** {mejor_balanceado['entity_name']}")
-    st.write(f"**Instrumento:** {mejor_balanceado.get('instrument_name', 'N/D')}")
-    st.write(f"**Score balanceado:** {mejor_balanceado['final_score_balanced']:.2f}")
-    st.write(f"**Riesgo:** {mejor_balanceado.get('risk_score', float('nan')):.2f}")
-    st.write(f"**Tasa real:** {mejor_balanceado.get('real_rate_pct', float('nan')):.2f}%")
-
-with col3:
-    st.markdown("### Perfil agresivo")
-    st.write(f"**Entidad:** {mejor_agresivo['entity_name']}")
-    st.write(f"**Instrumento:** {mejor_agresivo.get('instrument_name', 'N/D')}")
-    st.write(f"**Score agresivo:** {mejor_agresivo['final_score_aggressive']:.2f}")
-    st.write(f"**Riesgo:** {mejor_agresivo.get('risk_score', float('nan')):.2f}")
-    st.write(f"**Tasa real:** {mejor_agresivo.get('real_rate_pct', float('nan')):.2f}%")
-
-st.markdown("---")
-
-# =========================
-# LECTURA INTERPRETATIVA
-# =========================
-st.subheader("Lectura interpretativa")
-
-top_interpretacion = (
-    df_f.sort_values("final_score_balanced", ascending=False)
-    .head(5)
-)
-
-for _, row in top_interpretacion.iterrows():
-    st.markdown(f"### {row['entity_name']}")
-    st.write(f"**Instrumento:** {row.get('instrument_name', 'N/D')}")
-    st.write(f"**Moneda:** {row.get('currency_code', 'N/D')}")
-    st.write(f"**Plazo:** {row.get('term_profile', 'N/D')}")
-    st.write(f"**Tasa nominal:** {row.get('rate_nominal_pct', float('nan')):.2f}%")
-    st.write(f"**Tasa real:** {row.get('real_rate_pct', float('nan')):.2f}%")
-    st.write(f"**Riesgo:** {row.get('risk_score', float('nan')):.2f} · Categoría: {row.get('categoria_riesgo', 'N/D')}")
-    st.write(f"**Liquidez:** {row.get('liquidity_score', float('nan')):.2f}")
-    st.write(f"**Solvencia:** {row.get('solvency_score', float('nan')):.2f}")
-    st.write(f"**Score balanceado:** {row.get('final_score_balanced', float('nan')):.2f}")
-    st.write(f"**Recomendación:** {row.get('recommendation_tag', 'N/D')}")
-    st.markdown("---")
