@@ -6,7 +6,6 @@ from utils.filters import render_filtros_cda, aplicar_filtros_cda
 from utils.metrics import (
     calcular_kpis_generales,
     calcular_resumen_tipo,
-    calcular_resumen_moneda,
     calcular_resumen_plazo,
     calcular_percentiles_mercado,
 )
@@ -14,12 +13,12 @@ from utils.insights import generar_insight_overview
 from utils.charts import (
     grafico_riesgo_retorno,
     grafico_plazo_vs_tasa,
-    grafico_distribucion_tasas,
     grafico_score_por_tipo,
     grafico_boxplot_por_categoria,
     grafico_heatmap_promedios,
     grafico_conteo_categoria,
     grafico_barras_por_categoria,
+    grafico_tasa_nominal_por_plazo,
 )
 
 st.set_page_config(page_title="Overview", page_icon="📊", layout="wide")
@@ -29,7 +28,7 @@ st.markdown(
     """
     Vista general analítica del mercado de CDAs en Paraguay.
     Aquí se explora la estructura de oferta, la dispersión de tasas,
-    el trade-off riesgo-retorno y la segmentación por moneda, plazo y tipo de entidad.
+    el trade-off riesgo-retorno y la segmentación por plazo, perfil de pago y tipo de entidad.
     """
 )
 
@@ -53,7 +52,7 @@ if df_f.empty:
     st.stop()
 
 # =========================
-# KPIs
+# KPIS
 # =========================
 kpis = calcular_kpis_generales(df_f)
 
@@ -64,28 +63,32 @@ col5, col6, col7, col8 = st.columns(4)
 
 col1.metric("Registros", f"{kpis.get('registros', 0)}")
 col2.metric("Entidades", f"{kpis.get('entidades', 0)}")
-col3.metric("Monedas", f"{kpis.get('monedas', 0)}")
-col4.metric("Tipos de entidad", f"{kpis.get('tipos_entidad', 0)}")
-
-col5.metric(
+col3.metric("Tipos de entidad", f"{kpis.get('tipos_entidad', 0)}")
+col4.metric(
     "Tasa nominal promedio",
     f"{kpis.get('tasa_nominal_promedio', float('nan')):.2f}%"
     if pd.notna(kpis.get("tasa_nominal_promedio")) else "N/D"
 )
-col6.metric(
+
+col5.metric(
     "Tasa real promedio",
     f"{kpis.get('tasa_real_promedio', float('nan')):.2f}%"
     if pd.notna(kpis.get("tasa_real_promedio")) else "N/D"
 )
-col7.metric(
+col6.metric(
     "Riesgo promedio",
     f"{kpis.get('riesgo_promedio', float('nan')):.2f}"
     if pd.notna(kpis.get("riesgo_promedio")) else "N/D"
 )
-col8.metric(
+col7.metric(
     "Score balanceado promedio",
     f"{kpis.get('score_balanceado_promedio', float('nan')):.2f}"
     if pd.notna(kpis.get("score_balanceado_promedio")) else "N/D"
+)
+col8.metric(
+    "% con tasa real positiva",
+    f"{kpis.get('pct_tasa_real_positiva', float('nan')):.1f}%"
+    if pd.notna(kpis.get("pct_tasa_real_positiva")) else "N/D"
 )
 
 st.markdown("---")
@@ -106,11 +109,11 @@ st.subheader("Estructura del mercado")
 col1, col2 = st.columns(2)
 
 with col1:
-    fig = grafico_distribucion_tasas(
+    fig = grafico_tasa_nominal_por_plazo(
         df_f,
-        col="rate_nominal_pct",
-        titulo="Distribución de tasas nominales",
-        color_col="currency_code"
+        plazo_col="term_profile",
+        tasa_col="rate_nominal_pct",
+        titulo="Distribución de tasa nominal por perfil de plazo"
     )
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True)
@@ -130,17 +133,18 @@ col3, col4 = st.columns(2)
 with col3:
     fig = grafico_conteo_categoria(
         df_f,
-        categoria_col="currency_code",
-        titulo="Distribución por moneda"
+        categoria_col="interest_payment_frequency",
+        titulo="Distribución por perfil de pago de interés"
     )
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True)
 
 with col4:
-    fig = grafico_conteo_categoria(
+    fig = grafico_barras_por_categoria(
         df_f,
         categoria_col="term_profile",
-        titulo="Distribución por perfil de plazo"
+        valor_col="rate_nominal_pct",
+        titulo="Tasa nominal promedio por perfil de plazo"
     )
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True)
@@ -172,7 +176,7 @@ with col2:
         df_f,
         x_col="term_days_floor",
         y_col="rate_nominal_pct",
-        color_col="currency_code",
+        color_col="entity_type",
         hover_name="entity_name",
         titulo="Plazo vs tasa nominal"
     )
@@ -201,44 +205,22 @@ with col1:
 with col2:
     fig = grafico_boxplot_por_categoria(
         df_f,
-        categoria_col="currency_code",
+        categoria_col="interest_payment_frequency",
         valor_col="real_rate_pct",
-        titulo="Distribución de tasa real por moneda"
+        titulo="Distribución de tasa real por perfil de pago"
     )
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True)
 
 fig = grafico_heatmap_promedios(
     df_f,
-    row_col="currency_code",
+    row_col="entity_type",
     col_col="term_profile",
     value_col="final_score_balanced",
-    titulo="Heatmap · score balanceado promedio por moneda y plazo"
+    titulo="Heatmap · score balanceado promedio por tipo de entidad y plazo"
 )
 if fig is not None:
     st.plotly_chart(fig, use_container_width=True)
-
-col3, col4 = st.columns(2)
-
-with col3:
-    fig = grafico_barras_por_categoria(
-        df_f,
-        categoria_col="term_profile",
-        valor_col="rate_nominal_pct",
-        titulo="Tasa nominal promedio por perfil de plazo"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
-
-with col4:
-    fig = grafico_barras_por_categoria(
-        df_f,
-        categoria_col="currency_code",
-        valor_col="final_score_balanced",
-        titulo="Score balanceado promedio por moneda"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
@@ -248,10 +230,9 @@ st.markdown("---")
 st.subheader("Resúmenes analíticos")
 
 resumen_tipo = calcular_resumen_tipo(df_f)
-resumen_moneda = calcular_resumen_moneda(df_f)
 resumen_plazo = calcular_resumen_plazo(df_f)
 
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("### Por tipo de entidad")
@@ -259,11 +240,6 @@ with col1:
         st.dataframe(resumen_tipo, use_container_width=True)
 
 with col2:
-    st.markdown("### Por moneda")
-    if not resumen_moneda.empty:
-        st.dataframe(resumen_moneda, use_container_width=True)
-
-with col3:
     st.markdown("### Por perfil de plazo")
     if not resumen_plazo.empty:
         st.dataframe(resumen_plazo, use_container_width=True)
@@ -299,7 +275,6 @@ st.subheader("Tabla detallada del mercado")
 columnas_mostrar = [
     "entity_name",
     "entity_type",
-    "currency_code",
     "instrument_name",
     "term_profile",
     "term_bucket",
