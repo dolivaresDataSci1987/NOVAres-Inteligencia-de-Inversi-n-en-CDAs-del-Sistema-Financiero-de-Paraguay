@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 
 from utils.load_data import (
     cargar_datos_cda,
@@ -13,20 +14,112 @@ from utils.metrics import (
 from utils.insights import generar_insight_overview, generar_insight_macro
 
 st.set_page_config(
-    page_title="NOVAresDashboard",
+    page_title="NOVAres | CDAs Paraguay",
     page_icon="📈",
     layout="wide"
 )
 
-st.title("NOVAresDashboard")
-st.markdown("### Inteligencia de Inversión en CDAs del sistema financiero paraguayo")
-
+# =========================
+# ESTILOS
+# =========================
 st.markdown(
     """
-    Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura de
-    **rentabilidad, riesgo, liquidez, accesibilidad y contexto macrofinanciero**.
-    """
+    <style>
+        .main-header-card {
+            background: linear-gradient(135deg, #1b1235 0%, #2a174a 55%, #34195a 100%);
+            padding: 1.4rem 1.6rem 1.2rem 1.6rem;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 1.2rem;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+        }
+
+        .beta-badge {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 999px;
+            background-color: rgba(255,255,255,0.10);
+            color: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            margin-bottom: 0.8rem;
+        }
+
+        .main-title {
+            color: white;
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin: 0 0 0.2rem 0;
+            line-height: 1.1;
+        }
+
+        .main-subtitle {
+            color: rgba(255,255,255,0.92);
+            font-size: 1.15rem;
+            margin: 0.2rem 0 0.7rem 0;
+            font-weight: 500;
+        }
+
+        .main-description {
+            color: rgba(255,255,255,0.86);
+            font-size: 1rem;
+            margin-top: 0.4rem;
+            line-height: 1.6;
+        }
+
+        .ownership-note {
+            color: rgba(255,255,255,0.78);
+            font-size: 0.88rem;
+            margin-top: 1rem;
+        }
+
+        .logo-wrap img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
+        .block-container {
+            padding-top: 2rem;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
+
+# =========================
+# HEADER
+# =========================
+logo_path = Path("logo.png")
+if not logo_path.exists():
+    logo_path = Path("assets/logo.png")
+
+col1, col2 = st.columns([1.1, 2.5])
+
+with col1:
+    if logo_path.exists():
+        st.image(str(logo_path), use_container_width=True)
+
+with col2:
+    st.markdown(
+        """
+        <div class="main-header-card">
+            <div class="beta-badge">VERSIÓN BETA · 2026</div>
+            <div class="main-title">NOVAres | Inteligencia de Inversión en CDAs</div>
+            <div class="main-subtitle">Sistema financiero paraguayo</div>
+            <div class="main-description">
+                Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de
+                <b>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</b>.
+            </div>
+            <div class="ownership-note">
+                Propiedad de David Olivares by NOVAres (2026)
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("---")
 
 # =========================
 # CARGA
@@ -42,13 +135,17 @@ if df.empty:
 # =========================
 # SIDEBAR
 # =========================
-st.sidebar.title("NOVAresDashboard")
+st.sidebar.image(str(logo_path), use_container_width=True) if logo_path.exists() else None
+st.sidebar.title("NOVAres | CDAs Paraguay")
+st.sidebar.caption("Versión beta")
 st.sidebar.markdown("**Panel ejecutivo**")
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "Usa las páginas laterales para profundizar en overview, ranking, comparador, "
-    "riesgo-retorno y contexto macro."
+    "Usa las páginas laterales para profundizar en visión general, análisis regional, "
+    "ranking, comparador de CDAs y análisis de riesgo."
 )
+st.sidebar.markdown("---")
+st.sidebar.caption("Propiedad de David Olivares by NOVAres (2026)")
 
 # =========================
 # KPIS PRINCIPALES
@@ -163,4 +260,4 @@ st.subheader("Soporte metodológico")
 with st.expander("Ver diccionario de variables"):
     st.dataframe(df_dict, use_container_width=True)
 
-st.caption("Desarrollado por NOVAres · 2026")
+st.caption("Versión beta · Propiedad de David Olivares by NOVAres (2026)")
