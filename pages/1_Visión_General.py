@@ -21,9 +21,9 @@ from utils.charts import (
     grafico_tasa_nominal_por_plazo,
 )
 
-st.set_page_config(page_title="Overview", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Visión General del Mercado de CDA en Paraguay", page_icon="📊", layout="wide")
 
-st.title("Overview del mercado de CDAs")
+st.title("Visión General del Mercado de CDA en Paraguay")
 st.markdown(
     """
     Vista general analítica del mercado de CDAs en Paraguay.
@@ -44,7 +44,7 @@ if df.empty:
 # =========================
 # FILTROS
 # =========================
-filtros = render_filtros_cda(df, key_prefix="overview")
+filtros = render_filtros_cda(df, key_prefix="VisiónGeneral")
 df_f = aplicar_filtros_cda(df, filtros)
 
 if df_f.empty:
