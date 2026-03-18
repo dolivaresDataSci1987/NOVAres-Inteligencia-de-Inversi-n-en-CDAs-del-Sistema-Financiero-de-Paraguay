@@ -9,18 +9,8 @@ from utils.load_data import (
 from utils.metrics import (
     calcular_kpis_generales,
     obtener_mejores_por_dimension,
-    calcular_resumen_tipo,
-    calcular_resumen_moneda,
 )
 from utils.insights import generar_insight_overview, generar_insight_macro
-from utils.charts import (
-    grafico_distribucion_tasas,
-    grafico_score_por_tipo,
-    grafico_riesgo_retorno,
-    grafico_tasa_real_por_pais,
-    grafico_resumen_regional,
-    grafico_conteo_categoria,
-)
 
 st.set_page_config(
     page_title="NOVAresDashboard",
@@ -111,12 +101,10 @@ st.markdown("---")
 # =========================
 st.subheader("Lectura ejecutiva")
 
-insight_local = generar_insight_overview(df)
-st.info(insight_local)
+st.info(generar_insight_overview(df))
 
 if not df_int.empty:
-    insight_macro = generar_insight_macro(df_int)
-    st.info(insight_macro)
+    st.info(generar_insight_macro(df_int))
 
 st.markdown("---")
 
@@ -164,120 +152,6 @@ with col4:
         st.write(f"**Instrumento:** {top.get('instrument_name', 'N/D')}")
         st.write(f"**Riesgo:** {top.get('risk_score', float('nan')):.2f}")
         st.write(f"**Tasa real:** {top.get('real_rate_pct', float('nan')):.2f}%")
-
-st.markdown("---")
-
-# =========================
-# VISUALES PRINCIPALES
-# =========================
-st.subheader("Vista rápida del mercado")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    fig = grafico_distribucion_tasas(
-        df,
-        col="rate_nominal_pct",
-        titulo="Distribución de tasas nominales",
-        color_col="currency_code"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
-
-with col2:
-    fig = grafico_score_por_tipo(
-        df,
-        tipo_col="entity_type",
-        score_col="final_score_balanced",
-        titulo="Score balanceado promedio por tipo de entidad"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
-
-fig_rr = grafico_riesgo_retorno(
-    df,
-    x_col="risk_score",
-    y_col="real_rate_pct",
-    color_col="entity_type",
-    size_col="final_score_balanced",
-    hover_name="entity_name",
-    titulo="Mapa riesgo vs retorno real"
-)
-if fig_rr is not None:
-    st.plotly_chart(fig_rr, use_container_width=True)
-
-col3, col4 = st.columns(2)
-
-with col3:
-    fig = grafico_conteo_categoria(
-        df,
-        categoria_col="currency_code",
-        titulo="Distribución por moneda"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
-
-with col4:
-    fig = grafico_conteo_categoria(
-        df,
-        categoria_col="term_profile",
-        titulo="Distribución por perfil de plazo"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
-
-st.markdown("---")
-
-# =========================
-# RESÚMENES
-# =========================
-st.subheader("Resúmenes del mercado")
-
-resumen_tipo = calcular_resumen_tipo(df)
-resumen_moneda = calcular_resumen_moneda(df)
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("### Resumen por tipo de entidad")
-    if not resumen_tipo.empty:
-        st.dataframe(resumen_tipo, use_container_width=True)
-
-with col2:
-    st.markdown("### Resumen por moneda")
-    if not resumen_moneda.empty:
-        st.dataframe(resumen_moneda, use_container_width=True)
-
-st.markdown("---")
-
-# =========================
-# CONTEXTO INTERNACIONAL
-# =========================
-if not df_int.empty:
-    st.subheader("Contexto internacional")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        fig = grafico_tasa_real_por_pais(
-            df_int,
-            country_col="country",
-            valor_col="real_rate_proxy_pct",
-            top_n=15,
-            titulo="Comparativa internacional por tasa real proxy"
-        )
-        if fig is not None:
-            st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        fig = grafico_resumen_regional(
-            df_int,
-            region_col="region",
-            valor_col="real_rate_proxy_pct",
-            titulo="Promedio regional de tasa real proxy"
-        )
-        if fig is not None:
-            st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
