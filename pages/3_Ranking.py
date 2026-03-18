@@ -15,9 +15,10 @@ from utils.charts import (
     grafico_boxplot_por_categoria,
 )
 
-st.set_page_config(page_title="Ranking", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="Ranking", layout="wide")
 
-st.title("Ranking de oportunidades")
+st.title("🏆 Ranking de CDAs")
+
 st.markdown(
     """
     Esta página ordena las oportunidades de inversión en CDAs según el perfil de inversión seleccionado.
