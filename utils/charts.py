@@ -275,3 +275,96 @@ def grafico_tasa_nominal_por_plazo(df, plazo_col="term_profile", tasa_col="rate_
     )
     fig.update_layout(height=470, xaxis_title="", yaxis_title="Tasa nominal (%)")
     return fig
+
+def grafico_radar_comparador(df_comp, categorias=None, nombre_col="entity_name", titulo="Comparación multidimensional"):
+    if df_comp.empty or nombre_col not in df_comp.columns:
+        return None
+
+    categorias = categorias or [
+        "real_return_score_100",
+        "safety_score_100",
+        "flexibility_score_100",
+        "accessibility_score_100",
+        "market_timing_score_100"
+    ]
+    categorias = [c for c in categorias if c in df_comp.columns]
+
+    if not categorias:
+        return None
+
+    fig = go.Figure()
+
+    for _, row in df_comp.iterrows():
+        valores = [row[c] if pd.notna(row[c]) else 0 for c in categorias]
+
+        fig.add_trace(
+            go.Scatterpolar(
+                r=valores + [valores[0]],
+                theta=categorias + [categorias[0]],
+                fill="toself",
+                name=row[nombre_col]
+            )
+        )
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100]
+            )
+        ),
+        title=titulo,
+        height=520
+    )
+    return fig
+
+
+def grafico_barras_scores_comparador(df_comp, nombre_col="entity_name", columnas=None, titulo="Scores comparados"):
+    if df_comp.empty or nombre_col not in df_comp.columns:
+        return None
+
+    columnas = columnas or [
+        "final_score_conservative",
+        "final_score_balanced",
+        "final_score_aggressive"
+    ]
+    columnas = [c for c in columnas if c in df_comp.columns]
+
+    if not columnas:
+        return None
+
+    plot_df = df_comp[[nombre_col] + columnas].copy()
+    plot_df = plot_df.melt(
+        id_vars=nombre_col,
+        var_name="score_tipo",
+        value_name="score"
+    )
+    plot_df = plot_df.dropna(subset=["score"])
+
+    if plot_df.empty:
+        return None
+
+    nombres_scores = {
+        "final_score_conservative": "Conservador",
+        "final_score_balanced": "Balanceado",
+        "final_score_aggressive": "Agresivo",
+    }
+
+    plot_df["score_tipo"] = plot_df["score_tipo"].map(nombres_scores).fillna(plot_df["score_tipo"])
+
+    fig = px.bar(
+        plot_df,
+        x=nombre_col,
+        y="score",
+        color="score_tipo",
+        barmode="group",
+        title=titulo,
+        text_auto=".2f"
+    )
+
+    fig.update_layout(
+        height=480,
+        xaxis_title="",
+        yaxis_title="Score"
+    )
+    return fig
