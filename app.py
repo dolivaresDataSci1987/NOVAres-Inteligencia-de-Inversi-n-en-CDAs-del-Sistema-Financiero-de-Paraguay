@@ -31,73 +31,30 @@ if not logo_path.exists():
 # =========================
 st.markdown(
     """
-    <style>
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 1.5rem;
-        }
+    <div class="main-header-card">
 
-        .main-header-card {
-            background: linear-gradient(135deg, #160f2d 0%, #241243 45%, #32195a 100%);
-            padding: 2.3rem 2.5rem;
-            border-radius: 24px;
-            border: 1px solid rgba(255,255,255,0.07);
-            margin-bottom: 1.8rem;
-            box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.22),
-                inset 0 1px 0 rgba(255,255,255,0.04);
-        }
+        <div class="beta-badge">VERSIÓN BETA · 2026</div>
 
-        .beta-badge {
-            display: inline-block;
-            padding: 0.42rem 0.95rem;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.10);
-            color: #ffffff;
-            font-size: 0.82rem;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            margin-bottom: 1.15rem;
-        }
+        <div class="main-title">
+            NOVAres | Inteligencia de Inversión en CDAs
+        </div>
 
-        .main-title {
-            color: #ffffff;
-            font-size: 3rem;
-            font-weight: 800;
-            line-height: 1.12;
-            margin: 0 0 0.55rem 0;
-            max-width: 1000px;
-        }
+        <div class="main-subtitle">
+            Sistema financiero paraguayo
+        </div>
 
-        .main-subtitle {
-            color: rgba(255,255,255,0.88);
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 1.35rem;
-        }
+        <div class="main-description">
+            Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de 
+            <strong>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</strong>.
+        </div>
 
-        .main-description {
-            color: rgba(255,255,255,0.82);
-            font-size: 1.08rem;
-            line-height: 1.75;
-            max-width: 980px;
-        }
+        <div class="ownership-note">
+            Propiedad de David Olivares by NOVAres (2026)
+        </div>
 
-        .ownership-note {
-            color: rgba(255,255,255,0.66);
-            font-size: 0.88rem;
-            margin-top: 1.55rem;
-        }
-
-        div[data-testid="stMetric"] {
-            background-color: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            padding: 0.9rem 1rem;
-            border-radius: 14px;
-        }
-    </style>
+    </div>
     """,
-    unsafe_allow_html=True,
+    unsafe_allow_html=True
 )
 
 # =========================
