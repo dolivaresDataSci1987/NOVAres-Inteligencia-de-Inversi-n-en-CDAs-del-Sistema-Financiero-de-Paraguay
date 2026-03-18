@@ -16,10 +16,10 @@ from utils.charts import (
     grafico_plazo_vs_tasa,
     grafico_distribucion_tasas,
     grafico_score_por_tipo,
-    grafico_barras_por_categoria,
     grafico_boxplot_por_categoria,
     grafico_heatmap_promedios,
     grafico_conteo_categoria,
+    grafico_barras_por_categoria,
 )
 
 st.set_page_config(page_title="Overview", page_icon="📊", layout="wide")
@@ -27,13 +27,14 @@ st.set_page_config(page_title="Overview", page_icon="📊", layout="wide")
 st.title("Overview del mercado de CDAs")
 st.markdown(
     """
-    Vista general del mercado de CDAs en Paraguay con foco en
-    **rentabilidad, riesgo, plazo, accesibilidad y estructura de oferta**.
+    Vista general analítica del mercado de CDAs en Paraguay.
+    Aquí se explora la estructura de oferta, la dispersión de tasas,
+    el trade-off riesgo-retorno y la segmentación por moneda, plazo y tipo de entidad.
     """
 )
 
 # =========================
-# CARGA DE DATOS
+# CARGA
 # =========================
 df = cargar_datos_cda()
 
@@ -42,7 +43,7 @@ if df.empty:
     st.stop()
 
 # =========================
-# FILTROS UNIFICADOS
+# FILTROS
 # =========================
 filtros = render_filtros_cda(df, key_prefix="overview")
 df_f = aplicar_filtros_cda(df, filtros)
@@ -56,7 +57,7 @@ if df_f.empty:
 # =========================
 kpis = calcular_kpis_generales(df_f)
 
-st.subheader("KPIs clave del mercado filtrado")
+st.subheader("KPIs del mercado filtrado")
 
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
@@ -90,72 +91,71 @@ col8.metric(
 st.markdown("---")
 
 # =========================
-# INSIGHT AUTOMÁTICO
+# INSIGHT
 # =========================
 st.subheader("Lectura ejecutiva")
-insight = generar_insight_overview(df_f)
-st.info(insight)
+st.info(generar_insight_overview(df_f))
 
 st.markdown("---")
 
 # =========================
-# DISTRIBUCIÓN Y ESTRUCTURA
+# ESTRUCTURA DEL MERCADO
 # =========================
 st.subheader("Estructura del mercado")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    fig_dist_tasas = grafico_distribucion_tasas(
+    fig = grafico_distribucion_tasas(
         df_f,
         col="rate_nominal_pct",
         titulo="Distribución de tasas nominales",
         color_col="currency_code"
     )
-    if fig_dist_tasas is not None:
-        st.plotly_chart(fig_dist_tasas, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    fig_score_tipo = grafico_score_por_tipo(
+    fig = grafico_score_por_tipo(
         df_f,
         tipo_col="entity_type",
         score_col="final_score_balanced",
         titulo="Score balanceado promedio por tipo de entidad"
     )
-    if fig_score_tipo is not None:
-        st.plotly_chart(fig_score_tipo, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 col3, col4 = st.columns(2)
 
 with col3:
-    fig_moneda = grafico_conteo_categoria(
+    fig = grafico_conteo_categoria(
         df_f,
         categoria_col="currency_code",
         titulo="Distribución por moneda"
     )
-    if fig_moneda is not None:
-        st.plotly_chart(fig_moneda, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 with col4:
-    fig_plazo = grafico_conteo_categoria(
+    fig = grafico_conteo_categoria(
         df_f,
         categoria_col="term_profile",
         titulo="Distribución por perfil de plazo"
     )
-    if fig_plazo is not None:
-        st.plotly_chart(fig_plazo, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
 # =========================
 # MAPAS ANALÍTICOS
 # =========================
-st.subheader("Mapas analíticos del mercado")
+st.subheader("Mapas analíticos")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    fig_riesgo = grafico_riesgo_retorno(
+    fig = grafico_riesgo_retorno(
         df_f,
         x_col="risk_score",
         y_col="real_rate_pct",
@@ -164,11 +164,11 @@ with col1:
         hover_name="entity_name",
         titulo="Mapa riesgo vs retorno real"
     )
-    if fig_riesgo is not None:
-        st.plotly_chart(fig_riesgo, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    fig_plazo_tasa = grafico_plazo_vs_tasa(
+    fig = grafico_plazo_vs_tasa(
         df_f,
         x_col="term_days_floor",
         y_col="rate_nominal_pct",
@@ -176,8 +176,8 @@ with col2:
         hover_name="entity_name",
         titulo="Plazo vs tasa nominal"
     )
-    if fig_plazo_tasa is not None:
-        st.plotly_chart(fig_plazo_tasa, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
@@ -189,34 +189,56 @@ st.subheader("Segmentación del mercado")
 col1, col2 = st.columns(2)
 
 with col1:
-    fig_box_tipo = grafico_boxplot_por_categoria(
+    fig = grafico_boxplot_por_categoria(
         df_f,
         categoria_col="entity_type",
         valor_col="rate_nominal_pct",
         titulo="Distribución de tasa nominal por tipo de entidad"
     )
-    if fig_box_tipo is not None:
-        st.plotly_chart(fig_box_tipo, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    fig_box_moneda = grafico_boxplot_por_categoria(
+    fig = grafico_boxplot_por_categoria(
         df_f,
         categoria_col="currency_code",
         valor_col="real_rate_pct",
         titulo="Distribución de tasa real por moneda"
     )
-    if fig_box_moneda is not None:
-        st.plotly_chart(fig_box_moneda, use_container_width=True)
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
-fig_heatmap = grafico_heatmap_promedios(
+fig = grafico_heatmap_promedios(
     df_f,
     row_col="currency_code",
     col_col="term_profile",
     value_col="final_score_balanced",
     titulo="Heatmap · score balanceado promedio por moneda y plazo"
 )
-if fig_heatmap is not None:
-    st.plotly_chart(fig_heatmap, use_container_width=True)
+if fig is not None:
+    st.plotly_chart(fig, use_container_width=True)
+
+col3, col4 = st.columns(2)
+
+with col3:
+    fig = grafico_barras_por_categoria(
+        df_f,
+        categoria_col="term_profile",
+        valor_col="rate_nominal_pct",
+        titulo="Tasa nominal promedio por perfil de plazo"
+    )
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
+
+with col4:
+    fig = grafico_barras_por_categoria(
+        df_f,
+        categoria_col="currency_code",
+        valor_col="final_score_balanced",
+        titulo="Score balanceado promedio por moneda"
+    )
+    if fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
@@ -249,7 +271,7 @@ with col3:
 st.markdown("---")
 
 # =========================
-# PERCENTILES DEL MERCADO
+# PERCENTILES
 # =========================
 st.subheader("Percentiles del mercado")
 
@@ -259,18 +281,9 @@ percentiles_score = calcular_percentiles_mercado(df_f, "final_score_balanced")
 
 tabla_percentiles = pd.DataFrame(
     [
-        {
-            "variable": "Tasa nominal",
-            **percentiles_tasa
-        },
-        {
-            "variable": "Tasa real",
-            **percentiles_real
-        },
-        {
-            "variable": "Score balanceado",
-            **percentiles_score
-        },
+        {"variable": "Tasa nominal", **percentiles_tasa},
+        {"variable": "Tasa real", **percentiles_real},
+        {"variable": "Score balanceado", **percentiles_score},
     ]
 )
 
@@ -279,7 +292,7 @@ st.dataframe(tabla_percentiles, use_container_width=True)
 st.markdown("---")
 
 # =========================
-# TABLA BASE DEL MERCADO
+# TABLA DETALLADA
 # =========================
 st.subheader("Tabla detallada del mercado")
 
