@@ -87,20 +87,42 @@ st.markdown("---")
 # =========================
 # CLASIFICACIONES AUXILIARES
 # =========================
+def categorizar_por_terciles(serie: pd.Series, labels=("Bajo", "Medio", "Alto")):
+    serie = pd.to_numeric(serie, errors="coerce")
+
+    if serie.dropna().empty:
+        return pd.Series(["No disponible"] * len(serie), index=serie.index)
+
+    # Si hay muy pocos valores únicos, qcut puede fallar.
+    # En ese caso usamos ranking porcentual.
+    try:
+        cat = pd.qcut(serie, q=3, labels=labels, duplicates="drop")
+        cat = cat.astype("object")
+        cat = cat.where(pd.notna(cat), "No disponible")
+        return cat
+    except Exception:
+        ranks = serie.rank(pct=True, method="average")
+        out = pd.Series(index=serie.index, dtype="object")
+
+        out[ranks <= 1/3] = labels[0]
+        out[(ranks > 1/3) & (ranks <= 2/3)] = labels[1]
+        out[ranks > 2/3] = labels[2]
+        out = out.where(pd.notna(serie), "No disponible")
+        return out
+
+
 if "risk_score" in df_f.columns:
-    df_f["categoria_riesgo"] = pd.cut(
+    df_f["categoria_riesgo"] = categorizar_por_terciles(
         df_f["risk_score"],
-        bins=[-float("inf"), 33, 66, float("inf")],
-        labels=["Bajo", "Medio", "Alto"]
+        labels=("Bajo", "Medio", "Alto")
     )
 else:
     df_f["categoria_riesgo"] = "No disponible"
 
 if "final_score_balanced" in df_f.columns:
-    df_f["categoria_atractivo"] = pd.cut(
+    df_f["categoria_atractivo"] = categorizar_por_terciles(
         df_f["final_score_balanced"],
-        bins=[-float("inf"), 40, 70, float("inf")],
-        labels=["Bajo", "Medio", "Alto"]
+        labels=("Bajo", "Medio", "Alto")
     )
 else:
     df_f["categoria_atractivo"] = "No disponible"
@@ -236,8 +258,24 @@ cruce = (
 )
 
 if not cruce.empty:
+    orden_riesgo = ["Bajo", "Medio", "Alto"]
+    orden_atractivo = ["Bajo", "Medio", "Alto"]
+
+    # Completar combinaciones faltantes para que el gráfico siempre salga consistente
+    base = pd.MultiIndex.from_product(
+        [orden_riesgo, orden_atractivo],
+        names=["categoria_riesgo", "categoria_atractivo"]
+    ).to_frame(index=False)
+
+    cruce = base.merge(
+        cruce,
+        on=["categoria_riesgo", "categoria_atractivo"],
+        how="left"
+    )
+    cruce["cdas"] = cruce["cdas"].fillna(0).astype(int)
+
     total_cdas = cruce["cdas"].sum()
-    cruce["pct_universo"] = (cruce["cdas"] / total_cdas * 100).round(1)
+    cruce["pct_universo"] = ((cruce["cdas"] / total_cdas) * 100).round(1) if total_cdas > 0 else 0
 
     fig_cruce = px.bar(
         cruce,
@@ -246,8 +284,13 @@ if not cruce.empty:
         color="categoria_atractivo",
         barmode="stack",
         text_auto=True,
+        category_orders={
+            "categoria_riesgo": orden_riesgo,
+            "categoria_atractivo": orden_atractivo
+        },
         title="Número de CDAs por categoría de riesgo y atractivo"
     )
+
     fig_cruce.update_layout(
         xaxis_title="Categoría de riesgo",
         yaxis_title="Número de CDAs",
