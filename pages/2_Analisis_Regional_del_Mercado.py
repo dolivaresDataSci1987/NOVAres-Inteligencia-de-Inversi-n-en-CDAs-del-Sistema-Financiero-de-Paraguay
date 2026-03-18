@@ -3,9 +3,9 @@ import pandas as pd
 
 from utils.load_data import cargar_datos_cda, cargar_comparativa_internacional
 
-st.set_page_config(page_title="Contexto Macro", page_icon="🌎", layout="wide")
+st.set_page_config(page_title="Análisis Regional", layout="wide")
 
-st.title("Contexto macro y comparativa internacional")
+st.title("🌎 Análisis Regional del Mercado")
 st.markdown(
     """
     Analiza el posicionamiento de Paraguay frente a otros mercados a partir de
