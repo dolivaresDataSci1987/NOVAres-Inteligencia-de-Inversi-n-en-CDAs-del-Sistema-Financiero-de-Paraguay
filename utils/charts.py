@@ -368,3 +368,32 @@ def grafico_barras_scores_comparador(df_comp, nombre_col="entity_name", columnas
         yaxis_title="Score"
     )
     return fig
+
+def grafico_matriz_riesgo_atractivo(df, risk_col="categoria_riesgo", atr_col="categoria_atractivo", titulo="Matriz riesgo vs atractivo"):
+    if not _validar_columnas(df, [risk_col, atr_col]):
+        return None
+
+    pivot = (
+        df.groupby([risk_col, atr_col])
+        .size()
+        .reset_index(name="registros")
+        .pivot(index=risk_col, columns=atr_col, values="registros")
+        .fillna(0)
+    )
+
+    if pivot.empty:
+        return None
+
+    orden_riesgo = [x for x in ["Bajo", "Medio", "Alto", "No disponible"] if x in pivot.index]
+    orden_atr = [x for x in ["Bajo", "Medio", "Alto", "No disponible"] if x in pivot.columns]
+
+    pivot = pivot.reindex(index=orden_riesgo, columns=orden_atr)
+
+    fig = px.imshow(
+        pivot,
+        text_auto=True,
+        aspect="auto",
+        title=titulo
+    )
+    fig.update_layout(height=420)
+    return fig
