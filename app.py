@@ -29,62 +29,87 @@ if not logo_path.exists():
 # =========================
 # ESTILOS
 # =========================
-st.markdown(
-    """
-    <div class="main-header-card">
+st.markdown("""
+<style>
+.block-container {
+    padding-top: 2rem;
+}
 
-        <div class="beta-badge">VERSIÓN BETA · 2026</div>
+.main-header-card {
+    background: linear-gradient(135deg, #160f2d 0%, #241243 50%, #32195a 100%);
+    padding: 2.5rem 2.8rem;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 2rem;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+}
 
-        <div class="main-title">
-            NOVAres | Inteligencia de Inversión en CDAs
-        </div>
+.beta-badge {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+}
 
-        <div class="main-subtitle">
-            Sistema financiero paraguayo
-        </div>
+.main-title {
+    color: white;
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 0.6rem;
+}
 
-        <div class="main-description">
-            Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de 
-            <strong>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</strong>.
-        </div>
+.main-subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 1.25rem;
+    margin-bottom: 1.2rem;
+}
 
-        <div class="ownership-note">
-            Propiedad de David Olivares by NOVAres (2026)
-        </div>
+.main-description {
+    color: rgba(255,255,255,0.8);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    max-width: 900px;
+}
 
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+.ownership-note {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    margin-top: 1.5rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
-# HEADER PRINCIPAL
+# HEADER 
 # =========================
-st.markdown(
-    """
-    <div class="main-header-card">
-        <div class="beta-badge">VERSIÓN BETA · 2026</div>
+header_html = """
+<div class="main-header-card">
+    <div class="beta-badge">VERSIÓN BETA · 2026</div>
 
-        <div class="main-title">
-            NOVAres | Inteligencia de Inversión en CDAs
-        </div>
-
-        <div class="main-subtitle">
-            Sistema financiero paraguayo
-        </div>
-
-        <div class="main-description">
-            Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de
-            <b>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</b>.
-        </div>
-
-        <div class="ownership-note">
-            Propiedad de David Olivares by NOVAres (2026)
-        </div>
+    <div class="main-title">
+        NOVAres | Inteligencia de Inversión en CDAs
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+
+    <div class="main-subtitle">
+        Sistema financiero paraguayo
+    </div>
+
+    <div class="main-description">
+        Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de 
+        <strong>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</strong>.
+    </div>
+
+    <div class="ownership-note">
+        Propiedad de David Olivares by NOVAres (2026)
+    </div>
+</div>
+"""
+
+st.markdown(header_html, unsafe_allow_html=True)
 
 # =========================
 # CARGA
