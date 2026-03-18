@@ -9,9 +9,9 @@ from utils.charts import (
     grafico_barras_scores_comparador,
 )
 
-st.set_page_config(page_title="Comparador", page_icon="⚖️", layout="wide")
+st.set_page_config(page_title="Comparador", layout="wide")
 
-st.title("Comparador de CDAs")
+st.title("⚖️ Comparador de CDAs")
 st.markdown(
     """
     Compara de forma directa varias oportunidades de inversión en CDAs.
