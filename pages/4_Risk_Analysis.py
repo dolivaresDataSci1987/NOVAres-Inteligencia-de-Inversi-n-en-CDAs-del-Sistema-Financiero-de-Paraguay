@@ -1,19 +1,18 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 from utils.load_data import cargar_datos_cda
 from utils.filters import render_filtros_cda, aplicar_filtros_cda
 from utils.metrics import (
     calcular_kpis_generales,
     calcular_resumen_tipo,
+    calcular_resumen_plazo,
 )
 from utils.insights import generar_insight_riesgo
 from utils.charts import (
     grafico_riesgo_retorno,
     grafico_boxplot_por_categoria,
-    grafico_barras_por_categoria,
-    grafico_matriz_riesgo_atractivo,
-    grafico_top_ranking,
 )
 
 st.set_page_config(page_title="Análisis de Riesgo", page_icon="🛡️", layout="wide")
@@ -21,12 +20,9 @@ st.set_page_config(page_title="Análisis de Riesgo", page_icon="🛡️", layout
 st.title("Análisis de riesgo y retorno")
 st.markdown(
     """
-    Esta página ayuda a interpretar el mercado de CDAs desde una lógica de
-    **riesgo, retorno real, liquidez y equilibrio general**.
-
-    La idea no es mirar solo cuánto paga una opción, sino entender
-    **si ese retorno compensa el riesgo asumido** y qué oportunidades aparecen
-    como más defensivas o más agresivas dentro del universo filtrado.
+    Esta página analiza el **universo filtrado de CDAs**, no una sola entidad aislada.
+    El objetivo es entender cómo se distribuyen las oportunidades según su
+    **riesgo**, **retorno real**, **plazo** y **atractivo general**.
     """
 )
 
@@ -49,39 +45,40 @@ if df_f.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
     st.stop()
 
+df_f = df_f.copy()
+
 # =========================
-# GUÍA DE LECTURA
+# TEXTO EXPLICATIVO
 # =========================
 st.subheader("Cómo interpretar esta página")
 
 st.markdown(
     """
-    Aquí conviene leer cada oportunidad con cuatro preguntas simples:
+    Aquí no estamos evaluando solo cuánto paga un CDA, sino **qué tan razonable parece ese retorno**
+    en relación con el riesgo asumido.
 
-    - **¿Cuánto paga?** → tasa nominal y tasa real.
-    - **¿Qué tan defensiva parece?** → riesgo y seguridad relativa.
-    - **¿Qué tan flexible es?** → liquidez y condiciones del producto.
-    - **¿Compensa lo que ofrece?** → score balanceado y posicionamiento frente al resto.
+    **Qué conviene mirar:**
+    - **Riesgo:** qué tan defensiva o exigente parece la oportunidad dentro de esta metodología.
+    - **Tasa real:** cuánto rinde aproximadamente después de descontar inflación.
+    - **Score balanceado:** qué tan atractiva parece la opción combinando retorno, seguridad, liquidez y contexto.
+    - **Plazo en días:** cuánto tiempo queda inmovilizado el dinero.
 
-    **Lectura práctica:**
-    - una opción atractiva no siempre es la de mayor tasa,
-    - una opción de menor riesgo no siempre es la mejor si el retorno real es muy pobre,
-    - el punto interesante suele estar en el equilibrio entre retorno y protección.
+    **Importante:**  
+    Todos los gráficos y tablas de esta página resumen el **conjunto de CDAs filtrados**
+    que tienes activo en pantalla.
     """
 )
 
-with st.expander("Qué significa riesgo alto, medio o bajo en esta página"):
+with st.expander("Qué significa riesgo bajo, medio o alto en esta página"):
     st.markdown(
         """
-        La categoría de riesgo es una **clasificación interna del dashboard** para ordenar oportunidades
-        dentro del universo disponible.
+        Esta clasificación es **interna al dashboard** y sirve para ordenar el universo visible.
 
         - **Bajo:** opción relativamente más defensiva frente al resto.
-        - **Medio:** zona intermedia, con compensaciones entre protección y retorno.
-        - **Alto:** opción relativamente más exigente en términos de riesgo.
+        - **Medio:** zona intermedia.
+        - **Alto:** opción relativamente más exigente o más expuesta.
 
-        Esto no equivale a una garantía ni a una calificación oficial externa.
-        Sirve para comparar mejor las alternativas visibles.
+        No es una calificación oficial externa. Es una forma de comparar mejor las alternativas.
         """
     )
 
@@ -90,8 +87,6 @@ st.markdown("---")
 # =========================
 # CLASIFICACIONES AUXILIARES
 # =========================
-df_f = df_f.copy()
-
 if "risk_score" in df_f.columns:
     df_f["categoria_riesgo"] = pd.cut(
         df_f["risk_score"],
@@ -110,6 +105,13 @@ if "final_score_balanced" in df_f.columns:
 else:
     df_f["categoria_atractivo"] = "No disponible"
 
+df_f["opcion_label"] = (
+    df_f["entity_name"].fillna("Entidad")
+    + " · "
+    + df_f["term_days_floor"].fillna(0).astype(int).astype(str)
+    + " días"
+)
+
 # =========================
 # KPIS
 # =========================
@@ -120,7 +122,7 @@ st.subheader("KPIs clave de riesgo y retorno")
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
 
-col1.metric("Registros", f"{kpis.get('registros', 0)}")
+col1.metric("CDAs analizados", f"{kpis.get('registros', 0)}")
 col2.metric("Entidades", f"{kpis.get('entidades', 0)}")
 col3.metric(
     "Riesgo promedio",
@@ -165,9 +167,9 @@ st.info(generar_insight_riesgo(df_f))
 st.markdown("---")
 
 # =========================
-# OPORTUNIDADES DESTACADAS
+# DESTACADOS
 # =========================
-st.subheader("Oportunidades destacadas según enfoque")
+st.subheader("Oportunidades destacadas del universo filtrado")
 
 menor_riesgo = df_f.sort_values("risk_score", ascending=True).iloc[0]
 mayor_tasa_real = df_f.sort_values("real_rate_pct", ascending=False).iloc[0]
@@ -199,9 +201,9 @@ with col3:
 st.markdown("---")
 
 # =========================
-# MAPA RIESGO-RETORNO
+# MAPA PRINCIPAL
 # =========================
-st.subheader("Mapa principal de riesgo vs retorno real")
+st.subheader("Mapa principal del universo filtrado")
 
 fig_rr = grafico_riesgo_retorno(
     df_f,
@@ -209,69 +211,95 @@ fig_rr = grafico_riesgo_retorno(
     y_col="real_rate_pct",
     color_col="entity_type",
     size_col="final_score_balanced",
-    hover_name="entity_name",
-    titulo="Riesgo vs retorno real"
+    hover_name="opcion_label",
+    titulo="Cada punto representa un CDA del universo filtrado"
 )
 if fig_rr is not None:
     st.plotly_chart(fig_rr, use_container_width=True)
 
-st.markdown(
-    """
-    **Cómo leer este mapa:**  
-    - más a la derecha = mayor riesgo relativo,  
-    - más arriba = mejor retorno real,  
-    - puntos más grandes = mejor score balanceado general.  
-
-    Las oportunidades más interesantes suelen estar en la zona donde el retorno real es alto
-    sin que el riesgo se dispare demasiado.
-    """
+st.caption(
+    "Lectura: cada punto es un CDA concreto. Más arriba = mejor tasa real. "
+    "Más a la derecha = mayor riesgo relativo. Punto más grande = mejor score balanceado."
 )
 
 st.markdown("---")
 
 # =========================
-# MATRIZ RIESGO / ATRACTIVO
+# CRUCE RIESGO / ATRACTIVO
 # =========================
-st.subheader("Matriz de riesgo vs atractivo")
+st.subheader("Cruce entre riesgo y atractivo del universo filtrado")
 
-fig_matriz = grafico_matriz_riesgo_atractivo(
-    df_f,
-    risk_col="categoria_riesgo",
-    atr_col="categoria_atractivo",
-    titulo="Cruce entre categoría de riesgo y atractivo balanceado"
+cruce = (
+    df_f.groupby(["categoria_riesgo", "categoria_atractivo"], dropna=False)
+    .size()
+    .reset_index(name="cdas")
 )
-if fig_matriz is not None:
-    st.plotly_chart(fig_matriz, use_container_width=True)
 
-st.markdown(
-    """
-    Esta matriz ayuda a separar rápidamente:
-    - oportunidades con **bajo riesgo y alto atractivo**,
-    - opciones intermedias,
-    - y productos que quedan peor posicionados en el equilibrio general.
-    """
-)
+if not cruce.empty:
+    total_cdas = cruce["cdas"].sum()
+    cruce["pct_universo"] = (cruce["cdas"] / total_cdas * 100).round(1)
+
+    fig_cruce = px.bar(
+        cruce,
+        x="categoria_riesgo",
+        y="cdas",
+        color="categoria_atractivo",
+        barmode="stack",
+        text_auto=True,
+        title="Número de CDAs por categoría de riesgo y atractivo"
+    )
+    fig_cruce.update_layout(
+        xaxis_title="Categoría de riesgo",
+        yaxis_title="Número de CDAs",
+        legend_title="Atractivo"
+    )
+    st.plotly_chart(fig_cruce, use_container_width=True)
+
+    st.caption(
+        "Este gráfico resume cuántos CDAs del universo filtrado caen en cada combinación "
+        "de riesgo y atractivo. No representa una sola entidad."
+    )
+
+    tabla_cruce = cruce.rename(columns={
+        "categoria_riesgo": "Riesgo",
+        "categoria_atractivo": "Atractivo",
+        "cdas": "Número de CDAs",
+        "pct_universo": "% del universo"
+    })
+    st.dataframe(tabla_cruce, use_container_width=True)
 
 st.markdown("---")
 
 # =========================
-# DISTRIBUCIONES
+# SEGMENTACIÓN ÚTIL
 # =========================
-st.subheader("Distribuciones y segmentación")
+st.subheader("Segmentación útil del universo filtrado")
+
+resumen_tipo = calcular_resumen_tipo(df_f)
+resumen_plazo = calcular_resumen_plazo(df_f)
 
 col1, col2 = st.columns(2)
 
 with col1:
-    fig = grafico_boxplot_por_categoria(
-        df_f,
-        categoria_col="entity_type",
-        valor_col="risk_score",
-        titulo="Distribución de riesgo por tipo de entidad"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
+    st.markdown("### Resumen por tipo de entidad")
+    if not resumen_tipo.empty:
+        st.dataframe(resumen_tipo, use_container_width=True)
 
 with col2:
+    st.markdown("### Resumen por perfil de plazo")
+    if not resumen_plazo.empty:
+        st.dataframe(resumen_plazo, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
+# DISTRIBUCIONES CON SENTIDO
+# =========================
+st.subheader("Distribuciones con lectura más clara")
+
+col1, col2 = st.columns(2)
+
+with col1:
     fig = grafico_boxplot_por_categoria(
         df_f,
         categoria_col="term_profile",
@@ -281,80 +309,80 @@ with col2:
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True)
 
-col3, col4 = st.columns(2)
-
-with col3:
-    fig = grafico_barras_por_categoria(
-        df_f,
-        categoria_col="entity_type",
-        valor_col="final_score_balanced",
-        titulo="Score balanceado promedio por tipo de entidad"
-    )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
-
-with col4:
-    fig = grafico_barras_por_categoria(
+with col2:
+    fig = grafico_boxplot_por_categoria(
         df_f,
         categoria_col="term_profile",
-        valor_col="risk_score",
-        titulo="Riesgo promedio por perfil de plazo"
+        valor_col="final_score_balanced",
+        titulo="Distribución de score balanceado por perfil de plazo"
     )
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True)
 
+# =========================
+# RANKINGS ESPECÍFICOS
+# =========================
 st.markdown("---")
+st.subheader("Rankings específicos más legibles")
 
-# =========================
-# TOP DEFENSIVO / TOP RETORNO
-# =========================
-st.subheader("Rankings específicos")
+top_defensivo = (
+    df_f.sort_values(["final_score_conservative", "real_rate_pct"], ascending=[False, False])
+    [["opcion_label", "entity_type", "final_score_conservative"]]
+    .head(8)
+    .rename(columns={"final_score_conservative": "score"})
+)
+
+top_retorno = (
+    df_f.sort_values(["real_rate_pct", "final_score_balanced"], ascending=[False, False])
+    [["opcion_label", "entity_type", "real_rate_pct"]]
+    .head(8)
+    .rename(columns={"real_rate_pct": "score"})
+)
 
 col1, col2 = st.columns(2)
 
 with col1:
-    fig = grafico_top_ranking(
-        df_f.sort_values("final_score_conservative", ascending=False),
-        score_col="final_score_conservative",
-        nombre_col="entity_name",
-        top_n=8,
-        titulo="Top oportunidades defensivas",
-        color_col="entity_type"
+    fig_top_def = px.bar(
+        top_defensivo.sort_values("score", ascending=True),
+        x="score",
+        y="opcion_label",
+        color="entity_type",
+        orientation="h",
+        text_auto=".2f",
+        title="Top CDAs defensivos del universo filtrado"
     )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
+    fig_top_def.update_layout(
+        xaxis_title="Score conservador",
+        yaxis_title=""
+    )
+    st.plotly_chart(fig_top_def, use_container_width=True)
 
 with col2:
-    fig = grafico_top_ranking(
-        df_f.sort_values("real_rate_pct", ascending=False),
-        score_col="real_rate_pct",
-        nombre_col="entity_name",
-        top_n=8,
-        titulo="Top oportunidades por retorno real",
-        color_col="entity_type"
+    fig_top_ret = px.bar(
+        top_retorno.sort_values("score", ascending=True),
+        x="score",
+        y="opcion_label",
+        color="entity_type",
+        orientation="h",
+        text_auto=".2f",
+        title="Top CDAs por retorno real del universo filtrado"
     )
-    if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
+    fig_top_ret.update_layout(
+        xaxis_title="Tasa real (%)",
+        yaxis_title=""
+    )
+    st.plotly_chart(fig_top_ret, use_container_width=True)
 
-st.markdown("---")
-
-# =========================
-# RESÚMENES TABULARES
-# =========================
-st.subheader("Resúmenes analíticos")
-
-resumen_tipo = calcular_resumen_tipo(df_f)
-
-if not resumen_tipo.empty:
-    st.markdown("### Resumen por tipo de entidad")
-    st.dataframe(resumen_tipo, use_container_width=True)
+st.caption(
+    "Aquí cada barra representa una oportunidad concreta: entidad + plazo en días."
+)
 
 st.markdown("---")
 
 # =========================
 # TABLA PRINCIPAL
 # =========================
-st.subheader("Tabla de análisis de riesgo")
+st.subheader("Tabla de análisis del universo filtrado")
 
 columnas_riesgo = [
     "entity_name",
