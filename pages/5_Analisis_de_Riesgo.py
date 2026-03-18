@@ -15,9 +15,9 @@ from utils.charts import (
     grafico_boxplot_por_categoria,
 )
 
-st.set_page_config(page_title="Análisis de Riesgo", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="Riesgo", layout="wide")
 
-st.title("Análisis de riesgo y retorno")
+st.title("⚠️ Análisis de Riesgo")
 st.markdown(
     """
     Esta página analiza el **universo filtrado de CDAs**, no una sola entidad aislada.
