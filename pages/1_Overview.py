@@ -1,184 +1,287 @@
 import streamlit as st
 import pandas as pd
 
-from utils.load_data import (
-    cargar_datos_cda,
-    cargar_comparativa_internacional,
-    filtrar_datos,
+from utils.load_data import cargar_datos_cda
+from utils.filters import render_filtros_cda, aplicar_filtros_cda
+from utils.metrics import (
+    calcular_kpis_generales,
+    calcular_resumen_tipo,
+    calcular_resumen_moneda,
+    calcular_resumen_plazo,
+    calcular_percentiles_mercado,
+)
+from utils.insights import generar_insight_overview
+from utils.charts import (
+    grafico_riesgo_retorno,
+    grafico_plazo_vs_tasa,
+    grafico_distribucion_tasas,
+    grafico_score_por_tipo,
+    grafico_barras_por_categoria,
+    grafico_boxplot_por_categoria,
+    grafico_heatmap_promedios,
+    grafico_conteo_categoria,
 )
 
 st.set_page_config(page_title="Overview", page_icon="📊", layout="wide")
 
 st.title("Overview del mercado de CDAs")
-st.markdown("Vista general del mercado de CDAs en Paraguay y su contexto comparado.")
+st.markdown(
+    """
+    Vista general del mercado de CDAs en Paraguay con foco en
+    **rentabilidad, riesgo, plazo, accesibilidad y estructura de oferta**.
+    """
+)
 
 # =========================
 # CARGA DE DATOS
 # =========================
 df = cargar_datos_cda()
-df_int = cargar_comparativa_internacional()
+
+if df.empty:
+    st.warning("No se pudo cargar la base de CDAs.")
+    st.stop()
 
 # =========================
-# FILTROS
+# FILTROS UNIFICADOS
 # =========================
-st.sidebar.header("Filtros")
+filtros = render_filtros_cda(df, key_prefix="overview")
+df_f = aplicar_filtros_cda(df, filtros)
 
-monedas = st.sidebar.multiselect(
-    "Moneda",
-    options=sorted(df["currency_code"].dropna().unique()),
-    default=sorted(df["currency_code"].dropna().unique())
-)
-
-tipos_entidad = st.sidebar.multiselect(
-    "Tipo de entidad",
-    options=sorted(df["entity_type"].dropna().unique()),
-    default=sorted(df["entity_type"].dropna().unique())
-)
-
-perfiles_plazo = st.sidebar.multiselect(
-    "Perfil de plazo",
-    options=sorted(df["term_profile"].dropna().unique()),
-    default=sorted(df["term_profile"].dropna().unique())
-)
-
-df_f = filtrar_datos(
-    df,
-    monedas=monedas,
-    tipos_entidad=tipos_entidad,
-    perfiles_plazo=perfiles_plazo
-)
+if df_f.empty:
+    st.warning("No hay datos disponibles con los filtros seleccionados.")
+    st.stop()
 
 # =========================
-# 1. COMPARATIVA INTERNACIONAL
+# KPIs
 # =========================
-st.subheader("Comparativa del mercado paraguayo frente a otros mercados y regiones")
+kpis = calcular_kpis_generales(df_f)
 
-st.markdown(
-    """
-    Esta sección sitúa a Paraguay en contexto frente a otros mercados a partir de una
-    comparación de tasa benchmark, inflación, tasa real proxy y cobertura de depósitos.
-    """
+st.subheader("KPIs clave del mercado filtrado")
+
+col1, col2, col3, col4 = st.columns(4)
+col5, col6, col7, col8 = st.columns(4)
+
+col1.metric("Registros", f"{kpis.get('registros', 0)}")
+col2.metric("Entidades", f"{kpis.get('entidades', 0)}")
+col3.metric("Monedas", f"{kpis.get('monedas', 0)}")
+col4.metric("Tipos de entidad", f"{kpis.get('tipos_entidad', 0)}")
+
+col5.metric(
+    "Tasa nominal promedio",
+    f"{kpis.get('tasa_nominal_promedio', float('nan')):.2f}%"
+    if pd.notna(kpis.get("tasa_nominal_promedio")) else "N/D"
 )
-
-if not df_int.empty:
-    df_int = df_int.copy()
-
-    # Tabla resumida para mostrar
-    columnas_comp = [
-        "country",
-        "region",
-        "benchmark_rate_pct",
-        "inflation_yoy_pct",
-        "real_rate_proxy_pct",
-        "policy_rate_pct",
-        "market_risk_tier",
-        "deposit_protection_scheme",
-        "deposit_guarantee_limit",
-        "rank_by_real_rate_proxy",
-    ]
-    columnas_comp = [c for c in columnas_comp if c in df_int.columns]
-
-    paraguay_row = df_int[df_int["country"].str.upper() == "PARAGUAY"].copy()
-
-    col1, col2, col3 = st.columns(3)
-
-    if not paraguay_row.empty:
-        py = paraguay_row.iloc[0]
-
-        col1.metric(
-            "Paraguay · tasa benchmark",
-            f"{py['benchmark_rate_pct']:.2f}%"
-        )
-        col2.metric(
-            "Paraguay · inflación interanual",
-            f"{py['inflation_yoy_pct']:.2f}%"
-        )
-        col3.metric(
-            "Paraguay · tasa real proxy",
-            f"{py['real_rate_proxy_pct']:.2f}%"
-        )
-
-        st.info(
-            f"**Lectura rápida:** Paraguay aparece con un perfil de riesgo "
-            f"**{py['market_risk_tier']}** y ocupa la posición "
-            f"**{int(py['rank_by_real_rate_proxy'])}** en la comparativa por tasa real proxy."
-        )
-
-    st.dataframe(
-        df_int[columnas_comp].sort_values("rank_by_real_rate_proxy", ascending=True),
-        use_container_width=True
-    )
-
-    st.markdown("### Paraguay frente al promedio regional")
-
-    resumen_region = (
-        df_int.groupby("region", as_index=False)
-        .agg(
-            benchmark_rate_promedio=("benchmark_rate_pct", "mean"),
-            inflacion_promedio=("inflation_yoy_pct", "mean"),
-            tasa_real_proxy_promedio=("real_rate_proxy_pct", "mean")
-        )
-        .sort_values("tasa_real_proxy_promedio", ascending=False)
-    )
-
-    col1, col2 = st.columns([1.2, 1])
-
-    with col1:
-        st.dataframe(resumen_region, use_container_width=True)
-
-    with col2:
-        if not paraguay_row.empty:
-            st.markdown("#### Posicionamiento de Paraguay")
-            st.write(
-                f"- **Región:** {py['region']}"
-            )
-            st.write(
-                f"- **Tasa benchmark:** {py['benchmark_rate_pct']:.2f}%"
-            )
-            st.write(
-                f"- **Tasa real proxy:** {py['real_rate_proxy_pct']:.2f}%"
-            )
-            st.write(
-                f"- **Esquema de protección:** {py['deposit_protection_scheme']}"
-            )
-            st.write(
-                f"- **Límite de garantía:** {py['deposit_guarantee_limit']}"
-            )
-            st.write(
-                f"- **Comentario relativo:** {py['relative_attractiveness_note']}"
-            )
+col6.metric(
+    "Tasa real promedio",
+    f"{kpis.get('tasa_real_promedio', float('nan')):.2f}%"
+    if pd.notna(kpis.get("tasa_real_promedio")) else "N/D"
+)
+col7.metric(
+    "Riesgo promedio",
+    f"{kpis.get('riesgo_promedio', float('nan')):.2f}"
+    if pd.notna(kpis.get("riesgo_promedio")) else "N/D"
+)
+col8.metric(
+    "Score balanceado promedio",
+    f"{kpis.get('score_balanceado_promedio', float('nan')):.2f}"
+    if pd.notna(kpis.get("score_balanceado_promedio")) else "N/D"
+)
 
 st.markdown("---")
 
 # =========================
-# 2. KPIs BÁSICOS DE PARAGUAY
+# INSIGHT AUTOMÁTICO
 # =========================
-st.subheader("KPIs básicos del mercado de CDAs en Paraguay")
+st.subheader("Lectura ejecutiva")
+insight = generar_insight_overview(df_f)
+st.info(insight)
 
-total_registros = len(df_f)
-total_entidades = df_f["entity_name"].nunique()
-tasa_nominal_promedio = df_f["rate_nominal_pct"].mean()
-tasa_real_promedio = df_f["real_rate_pct"].mean()
-tasa_nominal_max = df_f["rate_nominal_pct"].max()
-score_balanceado_promedio = df_f["final_score_balanced"].mean()
+st.markdown("---")
+
+# =========================
+# DISTRIBUCIÓN Y ESTRUCTURA
+# =========================
+st.subheader("Estructura del mercado")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    fig_dist_tasas = grafico_distribucion_tasas(
+        df_f,
+        col="rate_nominal_pct",
+        titulo="Distribución de tasas nominales",
+        color_col="currency_code"
+    )
+    if fig_dist_tasas is not None:
+        st.plotly_chart(fig_dist_tasas, use_container_width=True)
+
+with col2:
+    fig_score_tipo = grafico_score_por_tipo(
+        df_f,
+        tipo_col="entity_type",
+        score_col="final_score_balanced",
+        titulo="Score balanceado promedio por tipo de entidad"
+    )
+    if fig_score_tipo is not None:
+        st.plotly_chart(fig_score_tipo, use_container_width=True)
+
+col3, col4 = st.columns(2)
+
+with col3:
+    fig_moneda = grafico_conteo_categoria(
+        df_f,
+        categoria_col="currency_code",
+        titulo="Distribución por moneda"
+    )
+    if fig_moneda is not None:
+        st.plotly_chart(fig_moneda, use_container_width=True)
+
+with col4:
+    fig_plazo = grafico_conteo_categoria(
+        df_f,
+        categoria_col="term_profile",
+        titulo="Distribución por perfil de plazo"
+    )
+    if fig_plazo is not None:
+        st.plotly_chart(fig_plazo, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
+# MAPAS ANALÍTICOS
+# =========================
+st.subheader("Mapas analíticos del mercado")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    fig_riesgo = grafico_riesgo_retorno(
+        df_f,
+        x_col="risk_score",
+        y_col="real_rate_pct",
+        color_col="entity_type",
+        size_col="final_score_balanced",
+        hover_name="entity_name",
+        titulo="Mapa riesgo vs retorno real"
+    )
+    if fig_riesgo is not None:
+        st.plotly_chart(fig_riesgo, use_container_width=True)
+
+with col2:
+    fig_plazo_tasa = grafico_plazo_vs_tasa(
+        df_f,
+        x_col="term_days_floor",
+        y_col="rate_nominal_pct",
+        color_col="currency_code",
+        hover_name="entity_name",
+        titulo="Plazo vs tasa nominal"
+    )
+    if fig_plazo_tasa is not None:
+        st.plotly_chart(fig_plazo_tasa, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
+# SEGMENTACIÓN
+# =========================
+st.subheader("Segmentación del mercado")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    fig_box_tipo = grafico_boxplot_por_categoria(
+        df_f,
+        categoria_col="entity_type",
+        valor_col="rate_nominal_pct",
+        titulo="Distribución de tasa nominal por tipo de entidad"
+    )
+    if fig_box_tipo is not None:
+        st.plotly_chart(fig_box_tipo, use_container_width=True)
+
+with col2:
+    fig_box_moneda = grafico_boxplot_por_categoria(
+        df_f,
+        categoria_col="currency_code",
+        valor_col="real_rate_pct",
+        titulo="Distribución de tasa real por moneda"
+    )
+    if fig_box_moneda is not None:
+        st.plotly_chart(fig_box_moneda, use_container_width=True)
+
+fig_heatmap = grafico_heatmap_promedios(
+    df_f,
+    row_col="currency_code",
+    col_col="term_profile",
+    value_col="final_score_balanced",
+    titulo="Heatmap · score balanceado promedio por moneda y plazo"
+)
+if fig_heatmap is not None:
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
+# RESÚMENES TABULARES
+# =========================
+st.subheader("Resúmenes analíticos")
+
+resumen_tipo = calcular_resumen_tipo(df_f)
+resumen_moneda = calcular_resumen_moneda(df_f)
+resumen_plazo = calcular_resumen_plazo(df_f)
 
 col1, col2, col3 = st.columns(3)
-col4, col5, col6 = st.columns(3)
 
-col1.metric("Registros analizados", f"{total_registros}")
-col2.metric("Entidades analizadas", f"{total_entidades}")
-col3.metric("Tasa nominal promedio", f"{tasa_nominal_promedio:.2f}%")
+with col1:
+    st.markdown("### Por tipo de entidad")
+    if not resumen_tipo.empty:
+        st.dataframe(resumen_tipo, use_container_width=True)
 
-col4.metric("Tasa real promedio", f"{tasa_real_promedio:.2f}%")
-col5.metric("Tasa nominal máxima", f"{tasa_nominal_max:.2f}%")
-col6.metric("Score balanceado promedio", f"{score_balanceado_promedio:.2f}")
+with col2:
+    st.markdown("### Por moneda")
+    if not resumen_moneda.empty:
+        st.dataframe(resumen_moneda, use_container_width=True)
+
+with col3:
+    st.markdown("### Por perfil de plazo")
+    if not resumen_plazo.empty:
+        st.dataframe(resumen_plazo, use_container_width=True)
 
 st.markdown("---")
 
 # =========================
-# 3. ANÁLISIS GENERAL DEL OVERVIEW
+# PERCENTILES DEL MERCADO
 # =========================
-st.subheader("Tabla resumen del mercado")
+st.subheader("Percentiles del mercado")
+
+percentiles_tasa = calcular_percentiles_mercado(df_f, "rate_nominal_pct")
+percentiles_real = calcular_percentiles_mercado(df_f, "real_rate_pct")
+percentiles_score = calcular_percentiles_mercado(df_f, "final_score_balanced")
+
+tabla_percentiles = pd.DataFrame(
+    [
+        {
+            "variable": "Tasa nominal",
+            **percentiles_tasa
+        },
+        {
+            "variable": "Tasa real",
+            **percentiles_real
+        },
+        {
+            "variable": "Score balanceado",
+            **percentiles_score
+        },
+    ]
+)
+
+st.dataframe(tabla_percentiles, use_container_width=True)
+
+st.markdown("---")
+
+# =========================
+# TABLA BASE DEL MERCADO
+# =========================
+st.subheader("Tabla detallada del mercado")
 
 columnas_mostrar = [
     "entity_name",
@@ -186,65 +289,28 @@ columnas_mostrar = [
     "currency_code",
     "instrument_name",
     "term_profile",
+    "term_bucket",
+    "size_bucket",
+    "interest_payment_frequency",
     "term_days_floor",
+    "min_amount",
     "rate_nominal_pct",
+    "rate_effective_pct",
     "real_rate_pct",
     "risk_score",
     "liquidity_score",
     "solvency_score",
+    "accessibility_score_100",
     "final_score_balanced",
     "recommendation_tag",
 ]
 
-columnas_mostrar = [col for col in columnas_mostrar if col in df_f.columns]
+columnas_mostrar = [c for c in columnas_mostrar if c in df_f.columns]
 
-st.dataframe(
-    df_f[columnas_mostrar].sort_values("final_score_balanced", ascending=False),
-    use_container_width=True
+tabla = (
+    df_f[columnas_mostrar]
+    .sort_values(["final_score_balanced", "real_rate_pct"], ascending=[False, False])
+    .reset_index(drop=True)
 )
 
-st.markdown("---")
-
-st.subheader("Promedios por tipo de entidad")
-
-resumen_tipo = (
-    df_f.groupby("entity_type", as_index=False)
-    .agg(
-        registros=("entity_name", "count"),
-        entidades=("entity_name", "nunique"),
-        tasa_nominal_promedio=("rate_nominal_pct", "mean"),
-        tasa_real_promedio=("real_rate_pct", "mean"),
-        riesgo_promedio=("risk_score", "mean"),
-        score_balanceado_promedio=("final_score_balanced", "mean"),
-    )
-    .sort_values("score_balanceado_promedio", ascending=False)
-)
-
-st.dataframe(resumen_tipo, use_container_width=True)
-
-st.markdown("---")
-
-st.subheader("Top 10 oportunidades según score balanceado")
-
-columnas_top = [
-    "entity_name",
-    "entity_type",
-    "currency_code",
-    "instrument_name",
-    "term_profile",
-    "rate_nominal_pct",
-    "real_rate_pct",
-    "risk_score",
-    "final_score_balanced",
-    "rank_balanced",
-    "recommendation_tag",
-]
-columnas_top = [c for c in columnas_top if c in df_f.columns]
-
-top10 = (
-    df_f.sort_values("final_score_balanced", ascending=False)
-    .loc[:, columnas_top]
-    .head(10)
-)
-
-st.dataframe(top10, use_container_width=True)
+st.dataframe(tabla, use_container_width=True)
