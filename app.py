@@ -20,67 +20,80 @@ st.set_page_config(
 )
 
 # =========================
+# RUTA LOGO
+# =========================
+logo_path = Path("logo.png")
+if not logo_path.exists():
+    logo_path = Path("assets/logo.png")
+
+# =========================
 # ESTILOS
 # =========================
 st.markdown(
     """
     <style>
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 1.5rem;
+        }
+
         .main-header-card {
-            background: linear-gradient(135deg, #1b1235 0%, #2a174a 55%, #34195a 100%);
-            padding: 1.4rem 1.6rem 1.2rem 1.6rem;
-            border-radius: 18px;
-            border: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 1.2rem;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+            background: linear-gradient(135deg, #160f2d 0%, #241243 45%, #32195a 100%);
+            padding: 2.3rem 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.07);
+            margin-bottom: 1.8rem;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.22),
+                inset 0 1px 0 rgba(255,255,255,0.04);
         }
 
         .beta-badge {
             display: inline-block;
-            padding: 0.3rem 0.7rem;
+            padding: 0.42rem 0.95rem;
             border-radius: 999px;
-            background-color: rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.10);
             color: #ffffff;
             font-size: 0.82rem;
-            font-weight: 700;
-            letter-spacing: 0.4px;
-            margin-bottom: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-bottom: 1.15rem;
         }
 
         .main-title {
-            color: white;
-            font-size: 2.4rem;
+            color: #ffffff;
+            font-size: 3rem;
             font-weight: 800;
-            margin: 0 0 0.2rem 0;
-            line-height: 1.1;
+            line-height: 1.12;
+            margin: 0 0 0.55rem 0;
+            max-width: 1000px;
         }
 
         .main-subtitle {
-            color: rgba(255,255,255,0.92);
-            font-size: 1.15rem;
-            margin: 0.2rem 0 0.7rem 0;
-            font-weight: 500;
+            color: rgba(255,255,255,0.88);
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.35rem;
         }
 
         .main-description {
-            color: rgba(255,255,255,0.86);
-            font-size: 1rem;
-            margin-top: 0.4rem;
-            line-height: 1.6;
+            color: rgba(255,255,255,0.82);
+            font-size: 1.08rem;
+            line-height: 1.75;
+            max-width: 980px;
         }
 
         .ownership-note {
-            color: rgba(255,255,255,0.78);
+            color: rgba(255,255,255,0.66);
             font-size: 0.88rem;
-            margin-top: 1rem;
+            margin-top: 1.55rem;
         }
 
-        .logo-wrap img {
-            max-width: 100%;
-            border-radius: 10px;
-        }
-
-        .block-container {
-            padding-top: 2rem;
+        div[data-testid="stMetric"] {
+            background-color: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 0.9rem 1rem;
+            border-radius: 14px;
         }
     </style>
     """,
@@ -88,38 +101,33 @@ st.markdown(
 )
 
 # =========================
-# HEADER
+# HEADER PRINCIPAL
 # =========================
-logo_path = Path("logo.png")
-if not logo_path.exists():
-    logo_path = Path("assets/logo.png")
+st.markdown(
+    """
+    <div class="main-header-card">
+        <div class="beta-badge">VERSIÓN BETA · 2026</div>
 
-col1, col2 = st.columns([1.1, 2.5])
-
-with col1:
-    if logo_path.exists():
-        st.image(str(logo_path), use_container_width=True)
-
-with col2:
-    st.markdown(
-        """
-        <div class="main-header-card">
-            <div class="beta-badge">VERSIÓN BETA · 2026</div>
-            <div class="main-title">NOVAres | Inteligencia de Inversión en CDAs</div>
-            <div class="main-subtitle">Sistema financiero paraguayo</div>
-            <div class="main-description">
-                Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de
-                <b>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</b>.
-            </div>
-            <div class="ownership-note">
-                Propiedad de David Olivares by NOVAres (2026)
-            </div>
+        <div class="main-title">
+            NOVAres | Inteligencia de Inversión en CDAs
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-st.markdown("---")
+        <div class="main-subtitle">
+            Sistema financiero paraguayo
+        </div>
+
+        <div class="main-description">
+            Plataforma analítica para explorar oportunidades de inversión en CDAs desde una lectura integrada de
+            <b>rentabilidad, riesgo, liquidez, accesibilidad y contexto de mercado</b>.
+        </div>
+
+        <div class="ownership-note">
+            Propiedad de David Olivares by NOVAres (2026)
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =========================
 # CARGA
@@ -135,7 +143,9 @@ if df.empty:
 # =========================
 # SIDEBAR
 # =========================
-st.sidebar.image(str(logo_path), use_container_width=True) if logo_path.exists() else None
+if logo_path.exists():
+    st.sidebar.image(str(logo_path), use_container_width=True)
+
 st.sidebar.title("NOVAres | CDAs Paraguay")
 st.sidebar.caption("Versión beta")
 st.sidebar.markdown("**Panel ejecutivo**")
@@ -159,11 +169,13 @@ col5, col6, col7, col8 = st.columns(4)
 
 col1.metric("Registros", f"{kpis.get('registros', 0)}")
 col2.metric("Entidades", f"{kpis.get('entidades', 0)}")
+
 col3.metric(
     "Tasa nominal promedio",
     f"{kpis.get('tasa_nominal_promedio', float('nan')):.2f}%"
     if pd.notna(kpis.get("tasa_nominal_promedio")) else "N/D"
 )
+
 col4.metric(
     "Tasa nominal máxima",
     f"{kpis.get('tasa_nominal_maxima', float('nan')):.2f}%"
@@ -175,16 +187,19 @@ col5.metric(
     f"{kpis.get('tasa_real_promedio', float('nan')):.2f}%"
     if pd.notna(kpis.get("tasa_real_promedio")) else "N/D"
 )
+
 col6.metric(
     "Score balanceado promedio",
     f"{kpis.get('score_balanceado_promedio', float('nan')):.2f}"
     if pd.notna(kpis.get("score_balanceado_promedio")) else "N/D"
 )
+
 col7.metric(
     "% con tasa real positiva",
     f"{kpis.get('pct_tasa_real_positiva', float('nan')):.1f}%"
     if pd.notna(kpis.get("pct_tasa_real_positiva")) else "N/D"
 )
+
 col8.metric(
     "% garantizados",
     f"{kpis.get('pct_garantizados', float('nan')):.1f}%"
