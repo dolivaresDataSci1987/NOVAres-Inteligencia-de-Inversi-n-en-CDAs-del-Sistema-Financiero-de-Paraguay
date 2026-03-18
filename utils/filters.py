@@ -11,25 +11,16 @@ def _safe_sorted_unique(df: pd.DataFrame, col: str):
 
 def render_filtros_cda(df: pd.DataFrame, sidebar: bool = True, key_prefix: str = "cda"):
     """
-    Renderiza filtros comunes del universo CDA y devuelve un diccionario.
+    Renderiza filtros simplificados del universo CDA.
+    Pensados para una UX más limpia y útil.
     """
     container = st.sidebar if sidebar else st
 
     container.header("Filtros")
 
-    monedas_disponibles = _safe_sorted_unique(df, "currency_code")
     tipos_disponibles = _safe_sorted_unique(df, "entity_type")
     plazo_disponibles = _safe_sorted_unique(df, "term_profile")
-    bucket_plazo_disponibles = _safe_sorted_unique(df, "term_bucket")
-    size_disponibles = _safe_sorted_unique(df, "size_bucket")
     frecuencia_disponible = _safe_sorted_unique(df, "interest_payment_frequency")
-
-    monedas = container.multiselect(
-        "Moneda",
-        options=monedas_disponibles,
-        default=monedas_disponibles,
-        key=f"{key_prefix}_monedas"
-    )
 
     tipos_entidad = container.multiselect(
         "Tipo de entidad",
@@ -45,30 +36,20 @@ def render_filtros_cda(df: pd.DataFrame, sidebar: bool = True, key_prefix: str =
         key=f"{key_prefix}_perfiles_plazo"
     )
 
-    term_buckets = container.multiselect(
-        "Bucket de plazo",
-        options=bucket_plazo_disponibles,
-        default=bucket_plazo_disponibles,
-        key=f"{key_prefix}_term_bucket"
-    )
-
-    size_buckets = container.multiselect(
-        "Tamaño de entidad",
-        options=size_disponibles,
-        default=size_disponibles,
-        key=f"{key_prefix}_size_bucket"
-    )
-
     interest_payment_frequency = container.multiselect(
-        "Frecuencia de pago de interés",
+        "Pago de interés",
         options=frecuencia_disponible,
         default=frecuencia_disponible,
         key=f"{key_prefix}_interest_payment_frequency"
     )
 
     rango_plazo = (
-        int(df["term_days_floor"].min()) if "term_days_floor" in df.columns and not df["term_days_floor"].dropna().empty else 0,
-        int(df["term_days_floor"].max()) if "term_days_floor" in df.columns and not df["term_days_floor"].dropna().empty else 365
+        int(df["term_days_floor"].min())
+        if "term_days_floor" in df.columns and not df["term_days_floor"].dropna().empty
+        else 0,
+        int(df["term_days_floor"].max())
+        if "term_days_floor" in df.columns and not df["term_days_floor"].dropna().empty
+        else 365
     )
 
     plazo_dias = container.slider(
@@ -107,67 +88,43 @@ def render_filtros_cda(df: pd.DataFrame, sidebar: bool = True, key_prefix: str =
         key=f"{key_prefix}_rango_monto"
     )
 
+    container.markdown("### Condiciones")
+
     solo_garantizados = container.checkbox(
-        "Solo instrumentos con garantía",
+        "Solo con garantía",
         value=False,
         key=f"{key_prefix}_solo_garantizados"
     )
 
     solo_con_rescate = container.checkbox(
-        "Solo instrumentos con retiro anticipado",
+        "Solo con retiro anticipado",
         value=False,
         key=f"{key_prefix}_solo_rescate"
     )
 
-    solo_autorenovable = container.checkbox(
-        "Solo instrumentos con auto renovación",
-        value=False,
-        key=f"{key_prefix}_solo_autorenovable"
-    )
-
-    solo_interes_compuesto = container.checkbox(
-        "Solo instrumentos con interés compuesto",
-        value=False,
-        key=f"{key_prefix}_solo_compuesto"
-    )
-
     return {
-        "monedas": monedas,
         "tipos_entidad": tipos_entidad,
         "perfiles_plazo": perfiles_plazo,
-        "term_buckets": term_buckets,
-        "size_buckets": size_buckets,
         "interest_payment_frequency": interest_payment_frequency,
         "plazo_dias": plazo_dias,
         "rango_tasa": rango_tasa,
         "rango_monto": rango_monto,
         "solo_garantizados": solo_garantizados,
         "solo_con_rescate": solo_con_rescate,
-        "solo_autorenovable": solo_autorenovable,
-        "solo_interes_compuesto": solo_interes_compuesto,
     }
 
 
 def aplicar_filtros_cda(df: pd.DataFrame, filtros: dict):
     """
-    Aplica los filtros comunes del universo CDA.
+    Aplica los filtros simplificados del universo CDA.
     """
     df_f = df.copy()
-
-    if filtros.get("monedas") and "currency_code" in df_f.columns:
-        df_f = df_f[df_f["currency_code"].isin(filtros["monedas"])]
 
     if filtros.get("tipos_entidad") and "entity_type" in df_f.columns:
         df_f = df_f[df_f["entity_type"].isin(filtros["tipos_entidad"])]
 
     if filtros.get("perfiles_plazo") and "term_profile" in df_f.columns:
         df_f = df_f[df_f["term_profile"].isin(filtros["perfiles_plazo"])]
-
-    if filtros.get("term_buckets") and "term_bucket" in df_f.columns:
-        df_f = df_f[df_f["term_bucket"].isin(filtros["term_buckets"])]
-
-    if filtros.get("size_buckets") and "size_bucket" in df_f.columns:
-        df_f = df_f[df_f["size_bucket"].isin(filtros["size_buckets"])]
 
     if filtros.get("interest_payment_frequency") and "interest_payment_frequency" in df_f.columns:
         df_f = df_f[df_f["interest_payment_frequency"].isin(filtros["interest_payment_frequency"])]
@@ -189,12 +146,6 @@ def aplicar_filtros_cda(df: pd.DataFrame, filtros: dict):
 
     if filtros.get("solo_con_rescate") and "withdrawal_allowed" in df_f.columns:
         df_f = df_f[df_f["withdrawal_allowed"] == 1]
-
-    if filtros.get("solo_autorenovable") and "auto_renewal" in df_f.columns:
-        df_f = df_f[df_f["auto_renewal"] == 1]
-
-    if filtros.get("solo_interes_compuesto") and "compound_interest" in df_f.columns:
-        df_f = df_f[df_f["compound_interest"] == 1]
 
     return df_f
 
