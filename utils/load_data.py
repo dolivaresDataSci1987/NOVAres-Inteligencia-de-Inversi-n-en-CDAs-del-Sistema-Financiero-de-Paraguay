@@ -78,9 +78,14 @@ def cargar_datos_cda():
         "instrument_name",
         "currency_code",
         "term_profile",
+        "term_bucket",
+        "size_bucket",
+        "interest_payment_frequency",
         "recommendation_tag",
-        "source",
-        "notes",
+        "rate_source",
+        "source_url",
+        "data_note",
+        "date_reference",
     ]
 
     df = _convertir_columnas_a_numerico(df, columnas_numericas)
@@ -124,21 +129,6 @@ def cargar_comparativa_internacional():
 def cargar_diccionario():
     path = DATA_DIR / "cda_master_dashboard_dictionary.csv"
     return pd.read_csv(path)
-
-
-def filtrar_datos(df, monedas=None, tipos_entidad=None, perfiles_plazo=None):
-    df_filtrado = df.copy()
-
-    if monedas and "currency_code" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["currency_code"].isin(monedas)]
-
-    if tipos_entidad and "entity_type" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["entity_type"].isin(tipos_entidad)]
-
-    if perfiles_plazo and "term_profile" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["term_profile"].isin(perfiles_plazo)]
-
-    return df_filtrado
 
 
 def obtener_columnas(df):
