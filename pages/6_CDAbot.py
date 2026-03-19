@@ -6,16 +6,6 @@ from utils.load_data import cargar_datos_cda
 from utils.filters import render_filtros_cda, aplicar_filtros_cda
 
 st.set_page_config(page_title="CDAbot", page_icon="🤖", layout="wide")
-st.warning(
-    """
-    **AVISO:** Este dashboard tiene fines exclusivamente **informativos, analíticos y educativos**. **No constituye asesoramiento financiero, recomendación de inversión ni sustituye la evaluación profesional personalizada.**
-Los datos mostrados se basan en información recopilada y procesada bajo una metodología propia de análisis. Algunas variables —como la **tasa nominal, tasa efectiva, plazo, monto mínimo u otras condiciones comerciales**—
-    pueden **variar ligeramente** respecto a la oferta final vigente de cada entidad financiera en el momento de la contratación.
- Esto se debe a que las condiciones de los CDAs pueden ser **dinámicas**, estar sujetas a **actualizaciones comerciales**,
-    cambios de mercado y, en algunos casos, a **negociación según el perfil del cliente, el monto invertido o el plazo pactado**.
- Antes de tomar una decisión de inversión, conviene **confirmar directamente con la entidad** las condiciones finales aplicables.
-    """
-)
 
 # =========================================================
 # CONFIG / HELPERS
@@ -414,12 +404,18 @@ st.markdown(
     """
     CDAbot te ayuda a traducir tus preferencias de inversión en una **selección práctica de CDAs**
     usando la misma lógica metodológica del dashboard.
-
-    Aquí no se crean scores nuevos: el bot reutiliza los perfiles **conservador, balanceado y agresivo**
-    ya presentes en la base, y los combina con tus restricciones de monto, plazo y liquidez.
     """
 )
-
+st.warning(
+    """
+    **AVISO:** Este dashboard tiene fines exclusivamente **informativos, analíticos y educativos**. **No constituye asesoramiento financiero, recomendación de inversión ni sustituye la evaluación profesional personalizada.**
+Los datos mostrados se basan en información recopilada y procesada bajo una metodología propia de análisis. Algunas variables —como la **tasa nominal, tasa efectiva, plazo, monto mínimo u otras condiciones comerciales**—
+    pueden **variar ligeramente** respecto a la oferta final vigente de cada entidad financiera en el momento de la contratación.
+ Esto se debe a que las condiciones de los CDAs pueden ser **dinámicas**, estar sujetas a **actualizaciones comerciales**,
+    cambios de mercado y, en algunos casos, a **negociación según el perfil del cliente, el monto invertido o el plazo pactado**.
+ Antes de tomar una decisión de inversión, conviene **confirmar directamente con la entidad** las condiciones finales aplicables.
+    """
+)
 st.info(
     "Consejo práctico: primero aplica los filtros generales del dashboard si quieres acotar el universo, "
     "y luego deja que CDAbot te ayude a priorizar."
