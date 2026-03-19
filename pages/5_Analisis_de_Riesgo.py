@@ -25,7 +25,16 @@ st.markdown(
     **riesgo**, **retorno real**, **plazo** y **atractivo general**.
     """
 )
-
+st.warning(
+    """
+    **AVISO:** Este dashboard tiene fines exclusivamente **informativos, analíticos y educativos**. **No constituye asesoramiento financiero, recomendación de inversión ni sustituye la evaluación profesional personalizada.**
+Los datos mostrados se basan en información recopilada y procesada bajo una metodología propia de análisis. Algunas variables —como la **tasa nominal, tasa efectiva, plazo, monto mínimo u otras condiciones comerciales**—
+    pueden **variar ligeramente** respecto a la oferta final vigente de cada entidad financiera en el momento de la contratación.
+ Esto se debe a que las condiciones de los CDAs pueden ser **dinámicas**, estar sujetas a **actualizaciones comerciales**,
+    cambios de mercado y, en algunos casos, a **negociación según el perfil del cliente, el monto invertido o el plazo pactado**.
+ Antes de tomar una decisión de inversión, conviene **confirmar directamente con la entidad** las condiciones finales aplicables.
+    """
+)
 # =========================
 # CARGA
 # =========================
