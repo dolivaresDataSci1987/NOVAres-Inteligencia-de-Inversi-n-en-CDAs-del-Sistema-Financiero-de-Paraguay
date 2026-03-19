@@ -68,8 +68,7 @@ with st.container(border=True):
     st.caption("Propiedad de David Olivares by NOVAres (2026)")
     st.warning(
     """
-    **AVISO:** Este dashboard tiene fines exclusivamente **informativos, analíticos y educativos**.  
-    **No constituye asesoramiento financiero, recomendación de inversión ni sustituye la evaluación profesional personalizada.**
+    **AVISO:** Este dashboard tiene fines exclusivamente **informativos, analíticos y educativos**. **No constituye asesoramiento financiero, recomendación de inversión ni sustituye la evaluación profesional personalizada.**
 Los datos mostrados se basan en información recopilada y procesada bajo una metodología propia de análisis.  
     Algunas variables —como la **tasa nominal, tasa efectiva, plazo, monto mínimo u otras condiciones comerciales**—
     pueden **variar ligeramente** respecto a la oferta final vigente de cada entidad financiera en el momento de la contratación.
